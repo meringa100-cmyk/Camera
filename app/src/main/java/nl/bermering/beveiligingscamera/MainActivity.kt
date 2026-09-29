@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var shot1: View
     private lateinit var shot2: View
     private lateinit var backFullscreen: View
+    private lateinit var switchFullscreen: View
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
         shot1 = findViewById(R.id.screenshot1)
         shot2 = findViewById(R.id.screenshot2)
         backFullscreen = findViewById(R.id.backFullscreen)
+        switchFullscreen = findViewById(R.id.switchFullscreen)
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -72,6 +74,7 @@ class MainActivity : ComponentActivity() {
         shot1.setOnClickListener { takeScreenshot(v1, "Achtertuin") }
         shot2.setOnClickListener { takeScreenshot(v2, "Voorkant") }
         backFullscreen.setOnClickListener { exitFullscreen() }
+        switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
         start()
     }
 
@@ -216,6 +219,7 @@ class MainActivity : ComponentActivity() {
             shot1.visibility = if (camera == 1) View.VISIBLE else View.GONE
             shot2.visibility = if (camera == 2) View.VISIBLE else View.GONE
             backFullscreen.visibility = View.VISIBLE
+            switchFullscreen.visibility = View.VISIBLE
             val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             params.weight = 0f
@@ -234,6 +238,7 @@ class MainActivity : ComponentActivity() {
         shot1.visibility = View.VISIBLE
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
+        switchFullscreen.visibility = View.GONE
         val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
@@ -262,6 +267,7 @@ class MainActivity : ComponentActivity() {
         shot1.visibility = View.VISIBLE
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
+        switchFullscreen.visibility = View.GONE
         val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
