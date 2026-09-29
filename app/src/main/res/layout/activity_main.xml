@@ -1,1 +1,108 @@
-<?xml version="1.0" encoding="utf-8"?><LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:background="#080c0f" android:padding="8dp" android:layout_width="match_parent" android:layout_height="match_parent"><TextView android:text="📹 360Eyes Duo" android:textColor="#fff" android:textSize="22sp" android:textStyle="bold" android:layout_width="match_parent" android:layout_height="wrap_content"/><LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"><androidx.media3.ui.PlayerView android:id="@+id/player1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="4dp"/><androidx.media3.ui.PlayerView android:id="@+id/player2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_margin="4dp"/></LinearLayout><TextView android:id="@+id/status" android:text="Verbinden…" android:textColor="#fff" android:padding="6dp" android:layout_width="match_parent" android:layout_height="wrap_content"/><Button android:id="@+id/reconnect" android:text="↻ Opnieuw verbinden" android:layout_width="match_parent" android:layout_height="wrap_content"/></LinearLayout>
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="#080c0f"
+    android:padding="8dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:text="📹 360Eyes Duo"
+        android:textColor="#ffffff"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <LinearLayout
+        android:id="@+id/cameraRow"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <FrameLayout
+            android:id="@+id/camera1Box"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="4dp">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/player1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+            <TextView
+                android:text="ACHTERTUIN"
+                android:textColor="#ffffff"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:background="#99000000"
+                android:padding="6dp"
+                android:layout_gravity="top|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/status1"
+                android:text="● Verbinden…"
+                android:textColor="#ffffff"
+                android:background="#99000000"
+                android:padding="5dp"
+                android:layout_gravity="bottom|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/camera2Box"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="4dp">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/player2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+            <TextView
+                android:text="VOORKANT"
+                android:textColor="#ffffff"
+                android:textStyle="bold"
+                android:textSize="16sp"
+                android:background="#99000000"
+                android:padding="6dp"
+                android:layout_gravity="top|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/status2"
+                android:text="● Verbinden…"
+                android:textColor="#ffffff"
+                android:background="#99000000"
+                android:padding="5dp"
+                android:layout_gravity="bottom|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </FrameLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/status"
+        android:text="Beide camera's starten…"
+        android:textColor="#ffffff"
+        android:gravity="center"
+        android:padding="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/reconnect"
+        android:text="↻ Opnieuw verbinden"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+</LinearLayout>
