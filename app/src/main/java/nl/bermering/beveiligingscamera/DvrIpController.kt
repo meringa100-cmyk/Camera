@@ -165,7 +165,7 @@ class DvrIpController {
         val out = StringBuilder(8)
         var i = 0
         while (i < 16) {
-            out.append(chars[(digest[i].toInt() and 0xFF) + (digest[i + 1].toInt() and 0xFF) % 62])
+            out.append(chars[((digest[i].toInt() and 0xFF) + (digest[i + 1].toInt() and 0xFF)) % 62])
             i += 2
         }
         return out.toString()
