@@ -7,8 +7,8 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
-import android.view.ScaleGestureDetector
-import android.view.TextureView
+import android.view.PixelCopy
+import android.view.SurfaceView
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -71,9 +71,6 @@ class MainActivity : ComponentActivity() {
         shot1.setOnClickListener { takeScreenshot(v1, "Achtertuin") }
         shot2.setOnClickListener { takeScreenshot(v2, "Voorkant") }
         backFullscreen.setOnClickListener { exitFullscreen() }
-
-        setupZoom(v1)
-        setupZoom(v2)
         start()
     }
 
@@ -105,48 +102,38 @@ class MainActivity : ComponentActivity() {
                 updateOverall()
             }
         })
-
         p.setMediaSource(s)
         p.prepare()
         p.playWhenReady = true
         return p
     }
 
-    private fun setupZoom(playerView: PlayerView) {
-        val detector = ScaleGestureDetector(this,
-            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    val scale = (playerView.scaleX * detector.scaleFactor).coerceIn(1f, 4f)
-                    playerView.scaleX = scale
-                    playerView.scaleY = scale
-                    return true
-                }
-            })
-
-        playerView.setOnTouchListener { _, event ->
-            detector.onTouchEvent(event)
-            false
-        }
-    }
-
-    private fun resetZoom() {
-        v1.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-        v2.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
-    }
-
     private fun takeScreenshot(playerView: PlayerView, cameraName: String) {
         val surface = playerView.videoSurfaceView
-        val bitmap = if (surface is TextureView && surface.isAvailable) {
-            surface.getBitmap()
-        } else {
-            null
-        }
-
-        if (bitmap == null) {
+        if (surface == null || !surface.isShown) {
             Toast.makeText(this, "Beeld nog niet beschikbaar", Toast.LENGTH_SHORT).show()
             return
         }
 
+        if (surface is SurfaceView) {
+            val bitmap = Bitmap.createBitmap(
+                surface.width.coerceAtLeast(1),
+                surface.height.coerceAtLeast(1),
+                Bitmap.Config.ARGB_8888
+            )
+            PixelCopy.request(surface, bitmap, { result ->
+                if (result == PixelCopy.SUCCESS) saveBitmap(bitmap, cameraName)
+                else {
+                    bitmap.recycle()
+                    Toast.makeText(this, "Foto maken mislukt", Toast.LENGTH_SHORT).show()
+                }
+            }, handler)
+        } else {
+            Toast.makeText(this, "Foto maken mislukt", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun saveBitmap(bitmap: Bitmap, cameraName: String) {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val filename = "360Eyes_" + cameraName + "_" + stamp + ".jpg"
         val values = ContentValues().apply {
@@ -155,26 +142,20 @@ class MainActivity : ComponentActivity() {
             put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/360Eyes")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
-
-        val resolver = contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-
+        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
         if (uri == null) {
-            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
             bitmap.recycle()
+            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
             return
         }
-
         try {
-            resolver.openOutputStream(uri)?.use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-            }
+            contentResolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
             values.clear()
             values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
+            contentResolver.update(uri, values, null, null)
             Toast.makeText(this, "Foto opgeslagen in Foto's/360Eyes", Toast.LENGTH_SHORT).show()
         } catch (_: Exception) {
-            resolver.delete(uri, null, null)
+            contentResolver.delete(uri, null, null)
             Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
         } finally {
             bitmap.recycle()
@@ -211,17 +192,12 @@ class MainActivity : ComponentActivity() {
         val controller = window.insetsController
         if (on) {
             controller?.hide(WindowInsets.Type.systemBars())
-            controller?.systemBarsBehavior =
-                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        } else {
-            controller?.show(WindowInsets.Type.systemBars())
-        }
+            controller?.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else controller?.show(WindowInsets.Type.systemBars())
     }
 
     private fun toggleFullscreen(camera: Int) {
-        if (fullScreenCamera == camera) {
-            exitFullscreen()
-        } else {
+        if (fullScreenCamera == camera) exitFullscreen() else {
             fullScreenCamera = camera
             box1.visibility = if (camera == 1) View.VISIBLE else View.GONE
             box2.visibility = if (camera == 2) View.VISIBLE else View.GONE
@@ -231,7 +207,6 @@ class MainActivity : ComponentActivity() {
             shot1.visibility = if (camera == 1) View.VISIBLE else View.GONE
             shot2.visibility = if (camera == 2) View.VISIBLE else View.GONE
             backFullscreen.visibility = View.VISIBLE
-
             val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             params.weight = 0f
@@ -250,8 +225,6 @@ class MainActivity : ComponentActivity() {
         shot1.visibility = View.VISIBLE
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
-        resetZoom()
-
         val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
@@ -261,11 +234,7 @@ class MainActivity : ComponentActivity() {
 
     @Deprecated("Deprecated in Android API 33")
     override fun onBackPressed() {
-        if (fullScreenCamera != 0) {
-            exitFullscreen()
-        } else {
-            super.onBackPressed()
-        }
+        if (fullScreenCamera != 0) exitFullscreen() else super.onBackPressed()
     }
 
     private fun start() {
@@ -274,8 +243,6 @@ class MainActivity : ComponentActivity() {
         b?.release()
         fullScreenCamera = 0
         immersive(false)
-        resetZoom()
-
         box1.visibility = View.VISIBLE
         box2.visibility = View.VISIBLE
         header.visibility = View.VISIBLE
@@ -284,12 +251,10 @@ class MainActivity : ComponentActivity() {
         shot1.visibility = View.VISIBLE
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
-
         val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
         cameraRow.layoutParams = params
-
         a = make(u1, 1)
         b = make(u2, 2)
         v1.player = a
