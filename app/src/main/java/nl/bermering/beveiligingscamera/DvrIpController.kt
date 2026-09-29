@@ -35,6 +35,28 @@ class DvrIpController {
         }
     }
 
+    fun loginDiagnostic(ip: String, username: String, password: String): String {
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ip, 34567), 3000)
+                socket.soTimeout = 4000
+                val input = BufferedInputStream(socket.getInputStream())
+                val output = BufferedOutputStream(socket.getOutputStream())
+                val login = JSONObject().apply {
+                    put("EncryptType", "MD5")
+                    put("LoginType", "DVRIP-Web")
+                    put("PassWord", sofiaHash(password))
+                    put("UserName", username)
+                }
+                send(output, 1000, 0L, login)
+                val reply = readMessage(input) ?: return "geen antwoord"
+                "antwoord msg=" + reply.msgId + ": " + reply.payload
+            }
+        } catch (e: Exception) {
+            e.javaClass.simpleName + ": " + (e.message ?: "")
+        }
+    }
+
     fun query(ip: String, username: String, password: String, beginTime: String, endTime: String): List<Recording> {
         Socket().use { socket ->
             socket.connect(InetSocketAddress(ip, 34567), 3000)
@@ -98,7 +120,7 @@ class DvrIpController {
         val payload = (json.toString() + "\n\u0000").toByteArray(StandardCharsets.UTF_8)
         val header = ByteArray(20)
         header[0] = magic.toByte()
-        header[1] = 1
+        header[1] = 0
         putLe16(header, 2, 0)
         putLe32(header, 4, sessionId)
         putLe32(header, 8, sequence++.toLong())
