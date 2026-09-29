@@ -45,7 +45,7 @@ class DvrIpController {
                 val login = JSONObject().apply {
                     put("EncryptType", "MD5")
                     put("LoginType", "DVRIP-Web")
-                    put("PassWord", sofiaHash(password))
+                    put("PassWord", sofiaHash(""))
                     put("UserName", username)
                 }
                 send(output, 1000, 0L, login)
