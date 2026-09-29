@@ -7,6 +7,7 @@
     android:layout_height="match_parent">
 
     <TextView
+        android:id="@+id/appHeader"
         android:text="📹 360Eyes Duo"
         android:textColor="#ffffff"
         android:textSize="22sp"
