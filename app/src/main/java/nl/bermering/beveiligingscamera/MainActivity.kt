@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         recordings = findViewById(R.id.recordings)
-        recordings.setOnClickListener { findRealRecordings() }
+        recordings.setOnClickListener { diagnoseCameraPorts() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -89,6 +89,30 @@ class MainActivity : ComponentActivity() {
     private var selectedPlaybackIp = "192.168.2.26"
     private var selectedPlaybackName = "ACHTERTUIN"
     private var playbackWindowEnd = Date()
+
+    private fun diagnoseCameraPorts() {
+        Toast.makeText(this, "Camera-poorten controleren…", Toast.LENGTH_SHORT).show()
+        Thread {
+            val d = DvrIpController()
+            val ips = listOf(
+                "ACHTERTUIN" to "192.168.2.26",
+                "VOORKANT" to "192.168.2.27"
+            )
+            val out = StringBuilder("Lokale camera-diagnose\\n\\n")
+            for ((name, ip) in ips) {
+                out.append(name).append(" (").append(ip).append(")\\n")
+                out.append("TCP 34567: ").append(d.probe(ip, 34567)).append("\\n")
+                out.append("TCP 23456: ").append(d.probe(ip, 23456)).append("\\n\\n")
+            }
+            runOnUiThread {
+                AlertDialog.Builder(this)
+                    .setTitle("Camera-poorten")
+                    .setMessage(out.toString())
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }.start()
+    }
 
     private fun findRealRecordings() {
         Toast.makeText(this, "Echte SD-opnames zoeken…", Toast.LENGTH_SHORT).show()
