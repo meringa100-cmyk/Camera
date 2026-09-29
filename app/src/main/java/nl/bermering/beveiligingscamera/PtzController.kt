@@ -21,7 +21,7 @@ class PtzController(
     private val cache = mutableMapOf<String, Info>()
 
     fun move(ip: String, x: Double, y: Double): Boolean {
-        val info = getInfo(ip) ?: return false false
+        val info = getInfo(ip) ?: return false
         val body = """
             <tptz:ContinuousMove xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl">
               <tptz:ProfileToken>${info.profileToken}</tptz:ProfileToken>
@@ -39,7 +39,7 @@ class PtzController(
     }
 
     fun home(ip: String): Boolean {
-        val info = getInfo(ip) ?: return
+        val info = getInfo(ip) ?: return false
         val body = """
             <tptz:GotoHomePosition xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl">
               <tptz:ProfileToken>${info.profileToken}</tptz:ProfileToken>
