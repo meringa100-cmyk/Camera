@@ -135,6 +135,13 @@
         android:layout_height="wrap_content"/>
 
     <Button
+        android:id="@+id/switchFullscreen"
+        android:text="⇄ Andere camera"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
         android:id="@+id/backFullscreen"
         android:text="↩ Terug naar 2 camera's"
         android:visibility="gone"
