@@ -74,8 +74,8 @@ class MainActivity : ComponentActivity() {
         switchFullscreen = findViewById(R.id.switchFullscreen)
         ptz1 = findViewById(R.id.ptzControls1)
         ptz2 = findViewById(R.id.ptzControls2)
-        setupPtz(ptz1, cameraIp1)
-        setupPtz(ptz2, cameraIp2)
+        setupPtz1(ptz1, cameraIp1)
+        setupPtz2(ptz2, cameraIp2)
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -87,12 +87,20 @@ class MainActivity : ComponentActivity() {
         start()
     }
 
-    private fun setupPtz(root: View, ip: String) {
+    private fun setupPtz1(root: View, ip: String) {
         root.findViewById<View>(R.id.ptzUp).setOnClickListener { sendPtz(ip, 0.0, 0.5) }
         root.findViewById<View>(R.id.ptzDown).setOnClickListener { sendPtz(ip, 0.0, -0.5) }
         root.findViewById<View>(R.id.ptzLeft).setOnClickListener { sendPtz(ip, -0.5, 0.0) }
         root.findViewById<View>(R.id.ptzRight).setOnClickListener { sendPtz(ip, 0.5, 0.0) }
         root.findViewById<View>(R.id.ptzHome).setOnClickListener { sendPtzHome(ip) }
+    }
+
+    private fun setupPtz2(root: View, ip: String) {
+        root.findViewById<View>(R.id.ptzUp2).setOnClickListener { sendPtz(ip, 0.0, 0.5) }
+        root.findViewById<View>(R.id.ptzDown2).setOnClickListener { sendPtz(ip, 0.0, -0.5) }
+        root.findViewById<View>(R.id.ptzLeft2).setOnClickListener { sendPtz(ip, -0.5, 0.0) }
+        root.findViewById<View>(R.id.ptzRight2).setOnClickListener { sendPtz(ip, 0.5, 0.0) }
+        root.findViewById<View>(R.id.ptzHome2).setOnClickListener { sendPtzHome(ip) }
     }
 
     private fun sendPtz(ip: String, x: Double, y: Double) {
