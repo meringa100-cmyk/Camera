@@ -20,6 +20,21 @@ class DvrIpController {
     private val magic = 0xFF
     private var sequence = 0
 
+    fun probe(ip: String, port: Int): String {
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ip, port), 2000)
+                "OPEN"
+            }
+        } catch (e: Exception) {
+            when (e) {
+                is java.net.SocketTimeoutException -> "TIMEOUT"
+                is java.net.ConnectException -> "CLOSED"
+                else -> e.javaClass.simpleName
+            }
+        }
+    }
+
     fun query(ip: String, username: String, password: String, beginTime: String, endTime: String): List<Recording> {
         Socket().use { socket ->
             socket.connect(InetSocketAddress(ip, 34567), 3000)
