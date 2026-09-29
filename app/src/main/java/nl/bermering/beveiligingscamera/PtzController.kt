@@ -163,10 +163,8 @@ class PtzController(
             "$username:$password".toByteArray(StandardCharsets.UTF_8),
             Base64.NO_WRAP
         )
-        return request(endpoint, action, body, "Basic $basic")
-    }
+        request(endpoint, action, body, "Basic $basic")?.let { return it }
         requestDigest(endpoint, action, body)?.let { return it }
-
         return null
     }
 
