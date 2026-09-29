@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         recordings = findViewById(R.id.recordings)
-        recordings.setOnClickListener { showPlaybackTimeline() }
+        recordings.setOnClickListener { findRealRecordings() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -89,6 +89,52 @@ class MainActivity : ComponentActivity() {
     private var selectedPlaybackIp = "192.168.2.26"
     private var selectedPlaybackName = "ACHTERTUIN"
     private var playbackWindowEnd = Date()
+
+    private fun findRealRecordings() {
+        Toast.makeText(this, "Echte SD-opnames zoeken…", Toast.LENGTH_SHORT).show()
+        Thread {
+            try {
+                val info = java.net.URI(u1)
+                val credentials = info.userInfo.split(":", limit = 2)
+                val username = credentials.first()
+                val password = credentials.last()
+                val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                val end = fmt.format(Date())
+                val start = fmt.format(Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000L))
+                val controller = DvrIpController()
+                val back = controller.query("192.168.2.26", username, password, start, end)
+                val front = controller.query("192.168.2.27", username, password, start, end)
+                runOnUiThread { showRealRecordingResults(back, front) }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    AlertDialog.Builder(this)
+                        .setTitle("SD-opnames")
+                        .setMessage("DVRIP-test mislukt:\n" + (e.message ?: "onbekende fout"))
+                        .setPositiveButton("OK", null)
+                        .show()
+                }
+            }
+        }.start()
+    }
+
+    private fun showRealRecordingResults(back: List<DvrIpController.Recording>, front: List<DvrIpController.Recording>) {
+        val text = StringBuilder()
+        text.append("ACHTERTUIN: ").append(back.size).append(" echte bestanden\n")
+        text.append("VOORKANT: ").append(front.size).append(" echte bestanden\n\n")
+        val all = (back.map { "ACHTERTUIN  " + it.beginTime + " – " + it.endTime + "\n" + it.fileName } +
+            front.map { "VOORKANT    " + it.beginTime + " – " + it.endTime + "\n" + it.fileName })
+        if (all.isEmpty()) {
+            text.append("Geen bestanden gevonden in de laatste 24 uur.")
+        } else {
+            all.take(30).forEach { text.append(it).append("\n\n") }
+            if (all.size > 30) text.append("… en ").append(all.size - 30).append(" meer.")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Echte SD-opnames")
+            .setMessage(text.toString())
+            .setPositiveButton("OK", null)
+            .show()
+    }
 
     private fun showPlaybackTimeline() {
         playbackPlayer?.release()
