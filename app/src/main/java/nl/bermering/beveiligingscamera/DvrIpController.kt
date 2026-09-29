@@ -49,12 +49,12 @@ class DvrIpController {
                 put("UserName", username)
             }
             send(output, 1000, 0L, login)
-            val loginReply = readMessage(input) ?: error("Geen login-antwoord op TCP 34567")
+            val loginReply = readMessage(input) ?: error("Geen login-antwoord op TCP 34567 (na login)")
             val loginJson = JSONObject(loginReply.payload)
             val loginRet = loginJson.optInt("Ret", -1)
-            if (loginRet != 100) error("DVRIP login mislukt: $loginRet")
+            if (loginRet != 100) error("DVRIP login antwoord: Ret=$loginRet")
             val sessionText = loginJson.optString("SessionID")
-            if (sessionText.isBlank()) error("Geen SessionID")
+            if (sessionText.isBlank()) error("Login antwoord zonder SessionID: $loginReply")
             val sessionId = sessionText.removePrefix("0x").toLong(16)
 
             val query = JSONObject().apply {
@@ -70,7 +70,7 @@ class DvrIpController {
                 })
             }
             send(output, 1440, sessionId, query)
-            val reply = readMessage(input) ?: error("Geen opname-antwoord")
+            val reply = readMessage(input) ?: error("Login gelukt, maar geen OPFileQuery-antwoord op TCP 34567")
             val json = JSONObject(reply.payload)
             val ret = json.optInt("Ret", -1)
             if (ret != 100) return emptyList()
