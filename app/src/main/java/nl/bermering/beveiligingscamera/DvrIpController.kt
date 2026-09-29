@@ -116,7 +116,8 @@ class DvrIpController {
         val first = ByteArray(20)
         readFully(input, first) ?: return null
         if ((first[0].toInt() and 0xFF) != 0xFF) error("Ongeldige DVRIP-header")
-        val total = first[12].toInt() and 0xFF
+        val totalRaw = first[12].toInt() and 0xFF
+        val total = if (totalRaw == 0) 1 else totalRaw
         val msgId = le16(first, 14)
         val firstIndex = first[13].toInt() and 0xFF
         val payloadLength = le32(first, 16).toInt()
