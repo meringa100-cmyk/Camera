@@ -42,7 +42,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var shot1: View
     private lateinit var shot2: View
     private lateinit var backFullscreen: View
-    private lateinit var switchFullscreen: View    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var switchFullscreen: View
+    private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
     private val u1 = "rtsp://admin:123456@192.168.2.26:554/cam/realmonitor?channel=0&subtype=1"
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
         shot2 = findViewById(R.id.screenshot2)
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
+
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
         v2.setOnClickListener { toggleFullscreen(2) }
@@ -218,7 +220,7 @@ class MainActivity : ComponentActivity() {
             shot2.visibility = if (camera == 2) View.VISIBLE else View.GONE
             backFullscreen.visibility = View.VISIBLE
             switchFullscreen.visibility = View.VISIBLE
-                        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+            val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             params.weight = 0f
             cameraRow.layoutParams = params
@@ -237,7 +239,7 @@ class MainActivity : ComponentActivity() {
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
         switchFullscreen.visibility = View.GONE
-                val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
         cameraRow.layoutParams = params
@@ -266,7 +268,7 @@ class MainActivity : ComponentActivity() {
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
         switchFullscreen.visibility = View.GONE
-                val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
         cameraRow.layoutParams = params
