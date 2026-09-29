@@ -110,56 +110,41 @@ class MainActivity : ComponentActivity() {
 
     private fun takeScreenshot(playerView: PlayerView, cameraName: String) {
         val surface = playerView.videoSurfaceView
-        if (surface == null || !surface.isShown) {
+
+        if (surface !is SurfaceView || !surface.isShown || !surface.holder.surface.isValid ||
+            surface.width <= 0 || surface.height <= 0) {
             Toast.makeText(this, "Beeld nog niet beschikbaar", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (surface is SurfaceView) {
-            val bitmap = Bitmap.createBitmap(
-                surface.width.coerceAtLeast(1),
-                surface.height.coerceAtLeast(1),
-                Bitmap.Config.ARGB_8888
-            )
+        val bitmap = Bitmap.createBitmap(
+            surface.width,
+            surface.height,
+            Bitmap.Config.ARGB_8888
+        )
+
+        handler.postDelayed({
+            if (!surface.holder.surface.isValid) {
+                bitmap.recycle()
+                Toast.makeText(this, "Cameraoppervlak niet beschikbaar", Toast.LENGTH_SHORT).show()
+                return@postDelayed
+            }
+
             PixelCopy.request(surface, bitmap, { result ->
-                if (result == PixelCopy.SUCCESS) saveBitmap(bitmap, cameraName)
-                else {
+                if (result == PixelCopy.SUCCESS) {
+                    saveBitmap(bitmap, cameraName)
+                } else {
                     bitmap.recycle()
-                    Toast.makeText(this, "Foto maken mislukt", Toast.LENGTH_SHORT).show()
+                    val message = when (result) {
+                        PixelCopy.ERROR_SOURCE_NO_DATA -> "Geen camerabeeld beschikbaar"
+                        PixelCopy.ERROR_SOURCE_INVALID -> "Camerabeeld ongeldig"
+                        PixelCopy.ERROR_TIMEOUT -> "Foto maken duurde te lang"
+                        else -> "Foto maken mislukt"
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                 }
             }, handler)
-        } else {
-            Toast.makeText(this, "Foto maken mislukt", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun saveBitmap(bitmap: Bitmap, cameraName: String) {
-        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val filename = "360Eyes_" + cameraName + "_" + stamp + ".jpg"
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/360Eyes")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
-        }
-        val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
-        if (uri == null) {
-            bitmap.recycle()
-            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
-            return
-        }
-        try {
-            contentResolver.openOutputStream(uri)?.use { bitmap.compress(Bitmap.CompressFormat.JPEG, 95, it) }
-            values.clear()
-            values.put(MediaStore.Images.Media.IS_PENDING, 0)
-            contentResolver.update(uri, values, null, null)
-            Toast.makeText(this, "Foto opgeslagen in Foto's/360Eyes", Toast.LENGTH_SHORT).show()
-        } catch (_: Exception) {
-            contentResolver.delete(uri, null, null)
-            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
-        } finally {
-            bitmap.recycle()
-        }
+        }, 150L)
     }
 
     private fun scheduleRetry(camera: Int) {
