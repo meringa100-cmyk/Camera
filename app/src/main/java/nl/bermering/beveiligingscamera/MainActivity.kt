@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         recordings = findViewById(R.id.recordings)
-        recordings.setOnClickListener { inspectRecordings() }
+        recordings.setOnClickListener { testSdPlayback() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -83,17 +83,55 @@ class MainActivity : ComponentActivity() {
         start()
     }
 
-    private fun inspectRecordings() {
-        Toast.makeText(this, "SD-opnames controleren…", Toast.LENGTH_SHORT).show()
+    private fun testSdPlayback() {
+        Toast.makeText(this, "SD-opname testen…", Toast.LENGTH_SHORT).show()
         Thread {
-            val r1 = recordingController.inspect("192.168.2.26")
-            val r2 = recordingController.inspect("192.168.2.27")
+            val end = Date()
+            val start = Date(end.time - 5 * 60 * 1000L)
+            val result1 = testPlayback("ACHTERTUIN", "192.168.2.26", start, end)
+            val result2 = testPlayback("VOORKANT", "192.168.2.27", start, end)
             runOnUiThread {
-                val a = if (r1.search != null || r1.replay != null || r1.recording != null) "ACHTERTUIN: opname-service gevonden" else "ACHTERTUIN: geen opname-service gevonden"
-                val b = if (r2.search != null || r2.replay != null || r2.recording != null) "VOORKANT: opname-service gevonden" else "VOORKANT: geen opname-service gevonden"
-                AlertDialog.Builder(this).setTitle("SD-opnames").setMessage("$a\n$b\n\nDit is de eerste controle. Als Replay/Search aanwezig is, bouwen we daarna de tijdlijn en afspelen in.").setPositiveButton("OK", null).show()
+                AlertDialog.Builder(this)
+                    .setTitle("SD-opname test")
+                    .setMessage(
+                        "Laatste 5 minuten getest\n\n" +
+                        "ACHTERTUIN: $result1\n" +
+                        "VOORKANT: $result2\n\n" +
+                        "Dit test rechtstreeks de mogelijke cam/playback-route. Als één camera beeld teruggeeft, kunnen we daarna de echte tijdlijn en afspelen bouwen."
+                    )
+                    .setPositiveButton("OK", null)
+                    .show()
             }
         }.start()
+    }
+
+    private fun testPlayback(name: String, ip: String, start: Date, end: Date): String {
+        val fmt = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
+        val uri = "rtsp://admin:123456@" + ip + ":554/cam/playback?channel=0&starttime=" + fmt.format(start) + "&endtime=" + fmt.format(end)
+        var player: ExoPlayer? = null
+        var result = "geen antwoord"
+        val lock = Object()
+        try {
+            player = ExoPlayer.Builder(this).build()
+            val source = RtspMediaSource.Factory().setForceUseRtpTcp(true).createMediaSource(MediaItem.fromUri(uri))
+            player.setMediaSource(source)
+            player.addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_READY) synchronized(lock) { result = "OPNAME GEVONDEN"; lock.notifyAll() }
+                }
+                override fun onPlayerError(error: PlaybackException) {
+                    synchronized(lock) { result = "geen playback-beeld"; lock.notifyAll() }
+                }
+            })
+            player.prepare()
+            player.playWhenReady = true
+            synchronized(lock) { if (result == "geen antwoord") lock.wait(7000L) }
+        } catch (_: Exception) {
+            result = "geen playback-beeld"
+        } finally {
+            player?.release()
+        }
+        return result
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
