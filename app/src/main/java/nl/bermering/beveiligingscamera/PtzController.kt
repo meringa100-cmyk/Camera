@@ -142,7 +142,7 @@ class PtzController(
                 connectTimeout = 3000
                 readTimeout = 4000
                 doOutput = true
-                setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action="$action"")
+                setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action=\"$action\"")
             }
             OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { it.write(envelope) }
             val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
