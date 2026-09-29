@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+   
     android:orientation="vertical"
     android:background="#080c0f"
     android:padding="8dp"
@@ -33,7 +33,7 @@
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player1"
-                app:surface_type="texture_view"
+               
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
