@@ -68,7 +68,6 @@ class DvrIpController {
                     put("StreamType", "0x00000000")
                     put("Type", "h264")
                 })
-                put("SessionID", sessionText)
             }
             send(output, 1440, sessionId, query)
             val reply = readMessage(input) ?: error("Geen opname-antwoord")
@@ -113,30 +112,13 @@ class DvrIpController {
     }
 
     private fun readMessage(input: BufferedInputStream): Message? {
-        val first = ByteArray(20)
-        readFully(input, first) ?: return null
-        if ((first[0].toInt() and 0xFF) != 0xFF) error("Ongeldige DVRIP-header")
-        val totalRaw = first[12].toInt() and 0xFF
-        val total = if (totalRaw == 0) 1 else totalRaw
-        val msgId = le16(first, 14)
-        val firstIndex = first[13].toInt() and 0xFF
-        val payloadLength = le32(first, 16).toInt()
-        val chunks = HashMap<Int, ByteArray>()
-        chunks[firstIndex] = readPayload(input, payloadLength)
-
-        for (i in 0 until total) {
-            if (i == firstIndex) continue
-            val header = ByteArray(20)
-            readFully(input, header) ?: return null
-            val len = le32(header, 16).toInt()
-            chunks[header[13].toInt() and 0xFF] = readPayload(input, len)
-        }
-
-        val combined = java.io.ByteArrayOutputStream()
-        for (i in 0 until total) {
-            chunks[i]?.let { combined.write(it) }
-        }
-        val text = combined.toByteArray().toString(StandardCharsets.UTF_8).trimEnd('\n', '\u0000')
+        val header = ByteArray(20)
+        readFully(input, header) ?: return null
+        if ((header[0].toInt() and 0xFF) != 0xFF) error("Ongeldige DVRIP-header")
+        val msgId = le16(header, 14)
+        val payloadLength = le32(header, 16).toInt()
+        val payload = readPayload(input, payloadLength)
+        val text = payload.toString(StandardCharsets.UTF_8).trimEnd('\n', '\u0000')
         return Message(msgId, text)
     }
 
