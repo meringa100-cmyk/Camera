@@ -107,6 +107,13 @@ class MainActivity : ComponentActivity() {
         }
         root.addView(title)
 
+        val timeLabel = TextView(this).apply {
+            textSize = 16f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 8, 0, 8)
+        }
+
+
         val cameraRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -131,12 +138,6 @@ class MainActivity : ComponentActivity() {
         cameraRow.addView(backButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         cameraRow.addView(frontButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(cameraRow)
-
-        val timeLabel = TextView(this).apply {
-            textSize = 16f
-            setTextColor(Color.LTGRAY)
-            setPadding(0, 8, 0, 8)
-        }
         root.addView(timeLabel)
 
         val player = PlayerView(this).apply {
