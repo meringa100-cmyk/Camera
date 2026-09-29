@@ -130,7 +130,7 @@
 
     <Button
         android:id="@+id/recordings"
-        android:text="▶ SD-opnames controleren"
+        android:text="📼 SD-opnames terugkijken"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
