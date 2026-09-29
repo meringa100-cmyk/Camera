@@ -70,7 +70,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         recordings = findViewById(R.id.recordings)
-        recordings.setOnClickListener { diagnoseCameraPorts() }
+        recordings.setOnClickListener { findRealRecordings() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
