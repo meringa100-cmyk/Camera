@@ -20,8 +20,8 @@ class PtzController(
     private data class Info(val endpoint: String, val profileToken: String)
     private val cache = mutableMapOf<String, Info>()
 
-    fun move(ip: String, x: Double, y: Double) {
-        val info = getInfo(ip) ?: return
+    fun move(ip: String, x: Double, y: Double): Boolean {
+        val info = getInfo(ip) ?: return false false
         val body = """
             <tptz:ContinuousMove xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl">
               <tptz:ProfileToken>${info.profileToken}</tptz:ProfileToken>
@@ -32,22 +32,23 @@ class PtzController(
               </tptz:Velocity>
             </tptz:ContinuousMove>
         """.trimIndent()
-        soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove", body)
+        val moved = soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove", body) != null
         Thread.sleep(350)
-        stop(info)
+        val stopped = stop(info)
+        return moved && stopped
     }
 
-    fun home(ip: String) {
+    fun home(ip: String): Boolean {
         val info = getInfo(ip) ?: return
         val body = """
             <tptz:GotoHomePosition xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl">
               <tptz:ProfileToken>${info.profileToken}</tptz:ProfileToken>
             </tptz:GotoHomePosition>
         """.trimIndent()
-        soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/GotoHomePosition", body)
+        return soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/GotoHomePosition", body) != null
     }
 
-    private fun stop(info: Info) {
+    private fun stop(info: Info): Boolean {
         val body = """
             <tptz:Stop xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl">
               <tptz:ProfileToken>${info.profileToken}</tptz:ProfileToken>
@@ -55,7 +56,7 @@ class PtzController(
               <tptz:Zoom>true</tptz:Zoom>
             </tptz:Stop>
         """.trimIndent()
-        soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/Stop", body)
+        return soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/Stop", body) != null
     }
 
     private fun getInfo(ip: String): Info? {
