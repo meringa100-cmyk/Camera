@@ -18,12 +18,12 @@ class DvrIpController {
     )
 
     private val magic = 0xFF
-    private var sequence = 1
+    private var sequence = 0
 
     fun query(ip: String, username: String, password: String, beginTime: String, endTime: String): List<Recording> {
         Socket().use { socket ->
             socket.connect(InetSocketAddress(ip, 34567), 3000)
-            socket.soTimeout = 6000
+            socket.soTimeout = 10000
             val input = BufferedInputStream(socket.getInputStream())
             val output = BufferedOutputStream(socket.getOutputStream())
 
@@ -34,7 +34,7 @@ class DvrIpController {
                 put("UserName", username)
             }
             send(output, 1000, 0L, login)
-            val loginReply = readMessage(input) ?: error("Geen login-antwoord")
+            val loginReply = readMessage(input) ?: error("Geen login-antwoord op TCP 34567")
             val loginJson = JSONObject(loginReply.payload)
             val loginRet = loginJson.optInt("Ret", -1)
             if (loginRet != 100) error("DVRIP login mislukt: $loginRet")
