@@ -99,6 +99,10 @@ class MainActivity : ComponentActivity() {
             setBackgroundColor(Color.rgb(18, 18, 18))
         }
 
+        val timelineContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
         val title = TextView(this).apply {
             text = "📼 SD-opnames terugkijken"
             textSize = 21f
