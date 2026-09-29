@@ -42,13 +42,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var shot1: View
     private lateinit var shot2: View
     private lateinit var backFullscreen: View
-    private lateinit var switchFullscreen: View
-    private lateinit var ptz1: View
-    private lateinit var ptz2: View
-    private val ptzController = PtzController("admin", "123456")
-    private val cameraIp1 = "192.168.2.26"
-    private val cameraIp2 = "192.168.2.27"
-    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var switchFullscreen: View    private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
     private val u1 = "rtsp://admin:123456@192.168.2.26:554/cam/realmonitor?channel=0&subtype=1"
@@ -72,11 +66,6 @@ class MainActivity : ComponentActivity() {
         shot2 = findViewById(R.id.screenshot2)
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
-        ptz1 = findViewById(R.id.ptzControls1)
-        ptz2 = findViewById(R.id.ptzControls2)
-        setupPtz1(ptz1, cameraIp1)
-        setupPtz2(ptz2, cameraIp2)
-
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
         v2.setOnClickListener { toggleFullscreen(2) }
@@ -85,46 +74,6 @@ class MainActivity : ComponentActivity() {
         backFullscreen.setOnClickListener { exitFullscreen() }
         switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
         start()
-    }
-
-    private fun setupPtz1(root: View, ip: String) {
-        root.findViewById<View>(R.id.ptzUp).setOnClickListener { sendPtz(ip, 0.0, 0.5) }
-        root.findViewById<View>(R.id.ptzDown).setOnClickListener { sendPtz(ip, 0.0, -0.5) }
-        root.findViewById<View>(R.id.ptzLeft).setOnClickListener { sendPtz(ip, -0.5, 0.0) }
-        root.findViewById<View>(R.id.ptzRight).setOnClickListener { sendPtz(ip, 0.5, 0.0) }
-        root.findViewById<View>(R.id.ptzHome).setOnClickListener { sendPtzHome(ip) }
-    }
-
-    private fun setupPtz2(root: View, ip: String) {
-        root.findViewById<View>(R.id.ptzUp2).setOnClickListener { sendPtz(ip, 0.0, 0.5) }
-        root.findViewById<View>(R.id.ptzDown2).setOnClickListener { sendPtz(ip, 0.0, -0.5) }
-        root.findViewById<View>(R.id.ptzLeft2).setOnClickListener { sendPtz(ip, -0.5, 0.0) }
-        root.findViewById<View>(R.id.ptzRight2).setOnClickListener { sendPtz(ip, 0.5, 0.0) }
-        root.findViewById<View>(R.id.ptzHome2).setOnClickListener { sendPtzHome(ip) }
-    }
-
-    private fun sendPtz(ip: String, x: Double, y: Double) {
-        Toast.makeText(this, "PTZ opdracht…", Toast.LENGTH_SHORT).show()
-        Thread {
-            val ok = ptzController.move(ip, x, y)
-            runOnUiThread {
-                if (!isFinishing) {
-                    Toast.makeText(this, if (ok) "Camera bewogen" else "PTZ niet beschikbaar", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
-    }
-
-    private fun sendPtzHome(ip: String) {
-        Toast.makeText(this, "Camera naar home…", Toast.LENGTH_SHORT).show()
-        Thread {
-            val ok = ptzController.home(ip)
-            runOnUiThread {
-                if (!isFinishing) {
-                    Toast.makeText(this, if (ok) "Home uitgevoerd" else "PTZ niet beschikbaar", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
@@ -269,9 +218,7 @@ class MainActivity : ComponentActivity() {
             shot2.visibility = if (camera == 2) View.VISIBLE else View.GONE
             backFullscreen.visibility = View.VISIBLE
             switchFullscreen.visibility = View.VISIBLE
-            ptz1.visibility = if (camera == 1) View.VISIBLE else View.GONE
-            ptz2.visibility = if (camera == 2) View.VISIBLE else View.GONE
-            val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+                        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
             params.weight = 0f
             cameraRow.layoutParams = params
@@ -290,9 +237,7 @@ class MainActivity : ComponentActivity() {
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
         switchFullscreen.visibility = View.GONE
-        ptz1.visibility = View.GONE
-        ptz2.visibility = View.GONE
-        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+                val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
         cameraRow.layoutParams = params
@@ -321,9 +266,7 @@ class MainActivity : ComponentActivity() {
         shot2.visibility = View.VISIBLE
         backFullscreen.visibility = View.GONE
         switchFullscreen.visibility = View.GONE
-        ptz1.visibility = View.GONE
-        ptz2.visibility = View.GONE
-        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+                val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
         params.weight = 1f
         cameraRow.layoutParams = params
