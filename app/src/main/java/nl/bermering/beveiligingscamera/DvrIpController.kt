@@ -98,7 +98,7 @@ class DvrIpController {
         val payload = (json.toString() + "\n\u0000").toByteArray(StandardCharsets.UTF_8)
         val header = ByteArray(20)
         header[0] = magic.toByte()
-        header[1] = 0
+        header[1] = 1
         putLe16(header, 2, 0)
         putLe32(header, 4, sessionId)
         putLe32(header, 8, sequence++.toLong())
