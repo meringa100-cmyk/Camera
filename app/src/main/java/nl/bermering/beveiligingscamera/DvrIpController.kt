@@ -103,7 +103,7 @@ class DvrIpController {
         putLe16(header, 2, 0)
         putLe32(header, 4, sessionId)
         putLe32(header, 8, sequence++.toLong())
-        header[12] = 1
+        header[12] = 0
         header[13] = 0
         putLe16(header, 14, msgId)
         putLe32(header, 16, payload.size.toLong())
