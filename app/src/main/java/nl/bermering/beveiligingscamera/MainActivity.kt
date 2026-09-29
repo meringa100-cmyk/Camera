@@ -88,10 +88,12 @@ class MainActivity : ComponentActivity() {
     private var playbackDialog: AlertDialog? = null
     private var selectedPlaybackIp = "192.168.2.26"
     private var selectedPlaybackName = "ACHTERTUIN"
+    private var playbackWindowEnd = Date()
 
     private fun showPlaybackTimeline() {
         playbackPlayer?.release()
         playbackPlayer = null
+        playbackWindowEnd = Date()
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -151,7 +153,8 @@ class MainActivity : ComponentActivity() {
         playbackView = player
         root.addView(player, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            230
+            0,
+            1f
         ))
 
         val scroll = ScrollView(this)
@@ -169,38 +172,69 @@ class MainActivity : ComponentActivity() {
         playbackDialog = dialog
         dialog.setOnDismissListener { stopPlayback() }
         dialog.show()
+        dialog.window?.setLayout(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
+        dialog.window?.decorView?.setBackgroundColor(Color.rgb(18, 18, 18))
 
         refreshTimelineButtons(timelineContainer, timeLabel)
     }
 
     private fun refreshTimelineButtons(container: LinearLayout, label: TextView) {
         container.removeAllViews()
+        val end = playbackWindowEnd
+        val startWindow = Date(end.time - 2 * 60 * 60 * 1000L)
         val now = Date()
         val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
         val fullFmt = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
-        label.text = "${selectedPlaybackName} • opnames rond ${fmt.format(now)}"
+        label.text = selectedPlaybackName + " • " + fmt.format(startWindow) + " – " + fmt.format(end)
+
+        val navRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val older = Button(this).apply {
+            text = "⬅ 2 uur terug"
+            isAllCaps = false
+            setOnClickListener {
+                playbackWindowEnd = Date(playbackWindowEnd.time - 2 * 60 * 60 * 1000L)
+                refreshTimelineButtons(container, label)
+            }
+        }
+        val newer = Button(this).apply {
+            text = "2 uur vooruit ➡"
+            isAllCaps = false
+            isEnabled = playbackWindowEnd.time < now.time
+            setOnClickListener {
+                playbackWindowEnd = Date((playbackWindowEnd.time + 2 * 60 * 60 * 1000L).coerceAtMost(Date().time))
+                refreshTimelineButtons(container, label)
+            }
+        }
+        navRow.addView(older, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        navRow.addView(newer, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        container.addView(navRow)
 
         val info = TextView(this).apply {
-            text = "Tik op een tijdvak van 5 minuten om dat stuk terug te kijken."
+            text = "Kies een opnameblok van 15 minuten. Met de knop 2 uur terug kun je onbeperkt verder terug."
             setTextColor(Color.LTGRAY)
             setPadding(0, 4, 0, 8)
         }
         container.addView(info)
 
-        for (i in 0 until 12) {
-            val endMillis = now.time - (i * 5 * 60 * 1000L)
-            val startMillis = endMillis - (5 * 60 * 1000L)
-            val start = Date(startMillis)
-            val end = Date(endMillis)
+        var blockEnd = end.time
+        while (blockEnd > startWindow.time) {
+            val blockStart = maxOf(startWindow.time, blockEnd - 15 * 60 * 1000L)
+            val start = Date(blockStart)
+            val blockEndDate = Date(blockEnd)
             val button = Button(this).apply {
-                text = "${fmt.format(start)} – ${fmt.format(end)}"
+                text = fmt.format(start) + " – " + fmt.format(blockEndDate)
                 isAllCaps = false
+                textSize = 15f
                 setOnClickListener {
-                    label.text = "${selectedPlaybackName} • ${fullFmt.format(start)} – ${fullFmt.format(end)}"
-                    playRecording(selectedPlaybackIp, start, end)
+                    label.text = selectedPlaybackName + " • " + fullFmt.format(start) + " – " + fullFmt.format(blockEndDate)
+                    playRecording(selectedPlaybackIp, start, blockEndDate)
                 }
             }
             container.addView(button)
+            blockEnd = blockStart
         }
     }
 
