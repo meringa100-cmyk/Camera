@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="#080c0f"
     android:padding="8dp"
@@ -32,6 +33,7 @@
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player1"
+                app:surface_type="texture_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
@@ -43,6 +45,18 @@
                 android:background="#99000000"
                 android:padding="6dp"
                 android:layout_gravity="top|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/screenshot1"
+                android:text="📸"
+                android:textSize="20sp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="8dp"
+                android:contentDescription="Foto achtertuin"
+                android:layout_gravity="top|end"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
@@ -66,6 +80,7 @@
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player2"
+                app:surface_type="texture_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
@@ -77,6 +92,18 @@
                 android:background="#99000000"
                 android:padding="6dp"
                 android:layout_gravity="top|start"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/screenshot2"
+                android:text="📸"
+                android:textSize="20sp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:padding="8dp"
+                android:contentDescription="Foto voorkant"
+                android:layout_gravity="top|end"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
@@ -104,6 +131,13 @@
     <Button
         android:id="@+id/reconnect"
         android:text="↻ Opnieuw verbinden"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
+        android:id="@+id/backFullscreen"
+        android:text="↩ Terug naar 2 camera's"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 </LinearLayout>
