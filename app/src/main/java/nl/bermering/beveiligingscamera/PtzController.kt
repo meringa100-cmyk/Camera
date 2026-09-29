@@ -35,7 +35,7 @@ class PtzController(
         val moved = soap(info.endpoint, "http://www.onvif.org/ver20/ptz/wsdl/ContinuousMove", body) != null
         Thread.sleep(350)
         val stopped = stop(info)
-        return moved && stopped
+        return moved
     }
 
     fun home(ip: String): Boolean {
@@ -164,6 +164,65 @@ class PtzController(
             Base64.NO_WRAP
         )
         return request(endpoint, action, body, "Basic $basic")
+    }
+        requestDigest(endpoint, action, body)?.let { return it }
+
+        return null
+    }
+
+    private fun requestDigest(endpoint: String, action: String, body: String): String? {
+        val challenge = requestRaw(endpoint, action, body) ?: return null
+        val header = challenge.first
+        if (challenge.second != 401 || !header.startsWith("Digest", true)) return null
+
+        val values = Regex("""(realm|nonce|qop|opaque)="?([^",]+)"?""")
+            .findAll(header)
+            .associate { it.groupValues[1] to it.groupValues[2] }
+        val realm = values["realm"] ?: return null
+        val nonce = values["nonce"] ?: return null
+        val qop = values["qop"]?.split(",")?.firstOrNull()?.trim()
+        val uri = URL(endpoint).path.ifBlank { "/" }
+        val nc = "00000001"
+        val cnonce = UUID.randomUUID().toString().replace("-", "").take(16)
+        fun md5(s: String): String = MessageDigest.getInstance("MD5")
+            .digest(s.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+
+        val ha1 = md5("$username:$realm:$password")
+        val ha2 = md5("POST:$uri")
+        val response = if (qop != null) {
+            md5("$ha1:$nonce:$nc:$cnonce:$qop:$ha2")
+        } else {
+            md5("$ha1:$nonce:$ha2")
+        }
+
+        val auth = buildString {
+            append("Digest username=\"$username\", realm=\"$realm\", nonce=\"$nonce\", uri=\"$uri\", response=\"$response\"")
+            if (qop != null) append(", qop=$qop, nc=$nc, cnonce=\"$cnonce\"")
+            values["opaque"]?.let { append(", opaque=\"$it\"") }
+        }
+        return request(endpoint, action, body, auth)
+    }
+
+    private fun requestRaw(endpoint: String, action: String, body: String): Pair<String, Int>? {
+        return try {
+            val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = 3000
+                readTimeout = 4000
+                doOutput = true
+                setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action=\"$action\"")
+            }
+            OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { it.write(body) }
+            val code = connection.responseCode
+            val header = connection.getHeaderField("WWW-Authenticate").orEmpty()
+            connection.errorStream?.close()
+            connection.inputStream?.close()
+            connection.disconnect()
+            Pair(header, code)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun request(
