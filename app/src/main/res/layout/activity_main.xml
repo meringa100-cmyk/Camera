@@ -60,6 +60,64 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
 
+            <LinearLayout
+                android:id="@+id/ptzControls1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone"
+                android:background="#AA000000"
+                android:padding="4dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <Button
+                    android:id="@+id/ptzUp"
+                    android:text="▲"
+                    android:textSize="20sp"
+                    android:minWidth="56dp"
+                    android:minHeight="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="48dp"/>
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    <Button
+                        android:id="@+id/ptzLeft"
+                        android:text="◀"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                    <Button
+                        android:id="@+id/ptzHome"
+                        android:text="⌂"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                    <Button
+                        android:id="@+id/ptzRight"
+                        android:text="▶"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                </LinearLayout>
+                <Button
+                    android:id="@+id/ptzDown"
+                    android:text="▼"
+                    android:textSize="20sp"
+                    android:minWidth="56dp"
+                    android:minHeight="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="48dp"/>
+            </LinearLayout>
+
             <TextView
                 android:id="@+id/status1"
                 android:text="● Verbinden…"
@@ -106,6 +164,64 @@
                 android:layout_gravity="top|end"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
+
+            <LinearLayout
+                android:id="@+id/ptzControls2"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone"
+                android:background="#AA000000"
+                android:padding="4dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="16dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <Button
+                    android:id="@+id/ptzUp2"
+                    android:text="▲"
+                    android:textSize="20sp"
+                    android:minWidth="56dp"
+                    android:minHeight="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="48dp"/>
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content">
+                    <Button
+                        android:id="@+id/ptzLeft2"
+                        android:text="◀"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                    <Button
+                        android:id="@+id/ptzHome2"
+                        android:text="⌂"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                    <Button
+                        android:id="@+id/ptzRight2"
+                        android:text="▶"
+                        android:textSize="20sp"
+                        android:minWidth="56dp"
+                        android:minHeight="48dp"
+                        android:layout_width="56dp"
+                        android:layout_height="48dp"/>
+                </LinearLayout>
+                <Button
+                    android:id="@+id/ptzDown2"
+                    android:text="▼"
+                    android:textSize="20sp"
+                    android:minWidth="56dp"
+                    android:minHeight="48dp"
+                    android:layout_width="56dp"
+                    android:layout_height="48dp"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/status2"
