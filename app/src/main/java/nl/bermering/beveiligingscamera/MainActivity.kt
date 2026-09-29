@@ -1,8 +1,14 @@
 package nl.bermering.beveiligingscamera
 
+import android.content.ContentValues
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
+import android.view.ScaleGestureDetector
+import android.view.TextureView
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -13,6 +19,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
 import androidx.media3.ui.PlayerView
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @UnstableApi
 class MainActivity : ComponentActivity() {
@@ -29,6 +38,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var overallStatus: View
     private lateinit var reconnect: View
     private lateinit var cameraRow: View
+    private lateinit var shot1: View
+    private lateinit var shot2: View
+    private lateinit var backFullscreen: View
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
@@ -49,10 +61,19 @@ class MainActivity : ComponentActivity() {
         overallStatus = findViewById(R.id.status)
         reconnect = findViewById(R.id.reconnect)
         cameraRow = findViewById(R.id.cameraRow)
+        shot1 = findViewById(R.id.screenshot1)
+        shot2 = findViewById(R.id.screenshot2)
+        backFullscreen = findViewById(R.id.backFullscreen)
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
         v2.setOnClickListener { toggleFullscreen(2) }
+        shot1.setOnClickListener { takeScreenshot(v1, "Achtertuin") }
+        shot2.setOnClickListener { takeScreenshot(v2, "Voorkant") }
+        backFullscreen.setOnClickListener { exitFullscreen() }
+
+        setupZoom(v1)
+        setupZoom(v2)
         start()
     }
 
@@ -89,6 +110,75 @@ class MainActivity : ComponentActivity() {
         p.prepare()
         p.playWhenReady = true
         return p
+    }
+
+    private fun setupZoom(playerView: PlayerView) {
+        val detector = ScaleGestureDetector(this,
+            object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                override fun onScale(detector: ScaleGestureDetector): Boolean {
+                    val scale = (playerView.scaleX * detector.scaleFactor).coerceIn(1f, 4f)
+                    playerView.scaleX = scale
+                    playerView.scaleY = scale
+                    return true
+                }
+            })
+
+        playerView.setOnTouchListener { _, event ->
+            detector.onTouchEvent(event)
+            false
+        }
+    }
+
+    private fun resetZoom() {
+        v1.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+        v2.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+    }
+
+    private fun takeScreenshot(playerView: PlayerView, cameraName: String) {
+        val surface = playerView.videoSurfaceView
+        val bitmap = if (surface is TextureView && surface.isAvailable) {
+            surface.getBitmap()
+        } else {
+            null
+        }
+
+        if (bitmap == null) {
+            Toast.makeText(this, "Beeld nog niet beschikbaar", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val filename = "360Eyes_" + cameraName + "_" + stamp + ".jpg"
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/360Eyes")
+            put(MediaStore.Images.Media.IS_PENDING, 1)
+        }
+
+        val resolver = contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+
+        if (uri == null) {
+            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
+            bitmap.recycle()
+            return
+        }
+
+        try {
+            resolver.openOutputStream(uri)?.use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+            }
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            Toast.makeText(this, "Foto opgeslagen in Foto's/360Eyes", Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            resolver.delete(uri, null, null)
+            Toast.makeText(this, "Foto opslaan mislukt", Toast.LENGTH_SHORT).show()
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     private fun scheduleRetry(camera: Int) {
@@ -130,18 +220,7 @@ class MainActivity : ComponentActivity() {
 
     private fun toggleFullscreen(camera: Int) {
         if (fullScreenCamera == camera) {
-            fullScreenCamera = 0
-            box1.visibility = View.VISIBLE
-            box2.visibility = View.VISIBLE
-            header.visibility = View.VISIBLE
-            overallStatus.visibility = View.VISIBLE
-            reconnect.visibility = View.VISIBLE
-
-            val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
-            params.height = 0
-            params.weight = 1f
-            cameraRow.layoutParams = params
-            immersive(false)
+            exitFullscreen()
         } else {
             fullScreenCamera = camera
             box1.visibility = if (camera == 1) View.VISIBLE else View.GONE
@@ -149,6 +228,9 @@ class MainActivity : ComponentActivity() {
             header.visibility = View.GONE
             overallStatus.visibility = View.GONE
             reconnect.visibility = View.GONE
+            shot1.visibility = if (camera == 1) View.VISIBLE else View.GONE
+            shot2.visibility = if (camera == 2) View.VISIBLE else View.GONE
+            backFullscreen.visibility = View.VISIBLE
 
             val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
             params.height = android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -158,18 +240,50 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun exitFullscreen() {
+        fullScreenCamera = 0
+        box1.visibility = View.VISIBLE
+        box2.visibility = View.VISIBLE
+        header.visibility = View.VISIBLE
+        overallStatus.visibility = View.VISIBLE
+        reconnect.visibility = View.VISIBLE
+        shot1.visibility = View.VISIBLE
+        shot2.visibility = View.VISIBLE
+        backFullscreen.visibility = View.GONE
+        resetZoom()
+
+        val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
+        params.height = 0
+        params.weight = 1f
+        cameraRow.layoutParams = params
+        immersive(false)
+    }
+
+    @Deprecated("Deprecated in Android API 33")
+    override fun onBackPressed() {
+        if (fullScreenCamera != 0) {
+            exitFullscreen()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     private fun start() {
         handler.removeCallbacksAndMessages(null)
         a?.release()
         b?.release()
         fullScreenCamera = 0
         immersive(false)
+        resetZoom()
 
         box1.visibility = View.VISIBLE
         box2.visibility = View.VISIBLE
         header.visibility = View.VISIBLE
         overallStatus.visibility = View.VISIBLE
         reconnect.visibility = View.VISIBLE
+        shot1.visibility = View.VISIBLE
+        shot2.visibility = View.VISIBLE
+        backFullscreen.visibility = View.GONE
 
         val params = cameraRow.layoutParams as android.widget.LinearLayout.LayoutParams
         params.height = 0
