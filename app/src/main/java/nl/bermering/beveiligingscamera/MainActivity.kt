@@ -13,6 +13,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.*
+import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.media3.common.*
 import androidx.media3.common.util.UnstableApi
@@ -87,16 +88,24 @@ class MainActivity : ComponentActivity() {
                     Player.STATE_BUFFERING -> "● Verbinden…"
                     else -> "● Wachten…"
                 }
-                if (camera == 1) st1.text = text else st2.text = text
+                if (camera == 1) {
+                    st1.text = text
+                    st1.setTextColor(if (state == Player.STATE_READY) Color.GREEN else Color.WHITE)
+                } else {
+                    st2.text = text
+                    st2.setTextColor(if (state == Player.STATE_READY) Color.GREEN else Color.WHITE)
+                }
                 updateOverall()
             }
 
             override fun onPlayerError(e: PlaybackException) {
                 if (camera == 1) {
                     st1.text = "● VERBINDING VERLOREN"
+                    st1.setTextColor(Color.RED)
                     scheduleRetry(1)
                 } else {
                     st2.text = "● VERBINDING VERLOREN"
+                    st2.setTextColor(Color.RED)
                     scheduleRetry(2)
                 }
                 updateOverall()
@@ -239,6 +248,8 @@ class MainActivity : ComponentActivity() {
 
     private fun start() {
         handler.removeCallbacksAndMessages(null)
+        st1.setTextColor(Color.WHITE)
+        st2.setTextColor(Color.WHITE)
         a?.release()
         b?.release()
         fullScreenCamera = 0
