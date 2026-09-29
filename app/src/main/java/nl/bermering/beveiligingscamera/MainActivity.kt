@@ -45,7 +45,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var backFullscreen: View
     private lateinit var switchFullscreen: View
     private lateinit var recordings: View
-    private val recordingController = RecordingController("admin", "123456")
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
@@ -71,7 +70,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         recordings = findViewById(R.id.recordings)
-        recordings.setOnClickListener { testSdPlayback() }
+        recordings.setOnClickListener { showPlaybackTimeline() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -83,49 +82,170 @@ class MainActivity : ComponentActivity() {
         start()
     }
 
-    private fun testSdPlayback() {
-        Toast.makeText(this, "SD-opname testen…", Toast.LENGTH_SHORT).show()
-        val end = Date()
-        val start = Date(end.time - 5 * 60 * 1000L)
-        testPlayback("ACHTERTUIN", "192.168.2.26", start, end) { result1 ->
-            testPlayback("VOORKANT", "192.168.2.27", start, end) { result2 ->
-                AlertDialog.Builder(this)
-                    .setTitle("SD-opname test")
-                    .setMessage("Laatste 5 minuten getest\n\nACHTERTUIN: $result1\nVOORKANT: $result2\n\nDit was alleen een technische test. Als er beeld terugkomt, bouwen we daarna de echte tijdlijn.")
-                    .setPositiveButton("OK", null)
-                    .show()
+
+    private var playbackPlayer: ExoPlayer? = null
+    private var playbackView: PlayerView? = null
+    private var playbackDialog: AlertDialog? = null
+    private var selectedPlaybackIp = "192.168.2.26"
+    private var selectedPlaybackName = "ACHTERTUIN"
+
+    private fun showPlaybackTimeline() {
+        playbackPlayer?.release()
+        playbackPlayer = null
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(20, 10, 20, 10)
+            setBackgroundColor(Color.rgb(18, 18, 18))
+        }
+
+        val title = TextView(this).apply {
+            text = "📼 SD-opnames terugkijken"
+            textSize = 21f
+            setTextColor(Color.WHITE)
+            setPadding(0, 0, 0, 12)
+        }
+        root.addView(title)
+
+        val cameraRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        val backButton = Button(this).apply {
+            text = "ACHTERTUIN"
+            isAllCaps = false
+            setOnClickListener {
+                selectedPlaybackIp = "192.168.2.26"
+                selectedPlaybackName = "ACHTERTUIN"
+                refreshTimelineButtons(timelineContainer, timeLabel)
             }
+        }
+        val frontButton = Button(this).apply {
+            text = "VOORKANT"
+            isAllCaps = false
+            setOnClickListener {
+                selectedPlaybackIp = "192.168.2.27"
+                selectedPlaybackName = "VOORKANT"
+                refreshTimelineButtons(timelineContainer, timeLabel)
+            }
+        }
+        cameraRow.addView(backButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        cameraRow.addView(frontButton, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(cameraRow)
+
+        val timeLabel = TextView(this).apply {
+            textSize = 16f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 8, 0, 8)
+        }
+        root.addView(timeLabel)
+
+        val player = PlayerView(this).apply {
+            useController = true
+            setBackgroundColor(Color.BLACK)
+        }
+        playbackView = player
+        root.addView(player, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            230
+        ))
+
+        val timelineContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val scroll = ScrollView(this)
+        scroll.addView(timelineContainer)
+        root.addView(scroll, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            0,
+            1f
+        ))
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(root)
+            .setNegativeButton("Sluiten") { _, _ -> stopPlayback() }
+            .create()
+        playbackDialog = dialog
+        dialog.setOnDismissListener { stopPlayback() }
+        dialog.show()
+
+        refreshTimelineButtons(timelineContainer, timeLabel)
+    }
+
+    private fun refreshTimelineButtons(container: LinearLayout, label: TextView) {
+        container.removeAllViews()
+        val now = Date()
+        val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val fullFmt = SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.getDefault())
+        label.text = "${selectedPlaybackName} • opnames rond ${fmt.format(now)}"
+
+        val info = TextView(this).apply {
+            text = "Tik op een tijdvak van 5 minuten om dat stuk terug te kijken."
+            setTextColor(Color.LTGRAY)
+            setPadding(0, 4, 0, 8)
+        }
+        container.addView(info)
+
+        for (i in 0 until 12) {
+            val endMillis = now.time - (i * 5 * 60 * 1000L)
+            val startMillis = endMillis - (5 * 60 * 1000L)
+            val start = Date(startMillis)
+            val end = Date(endMillis)
+            val button = Button(this).apply {
+                text = "${fmt.format(start)} – ${fmt.format(end)}"
+                isAllCaps = false
+                setOnClickListener {
+                    label.text = "${selectedPlaybackName} • ${fullFmt.format(start)} – ${fullFmt.format(end)}"
+                    playRecording(selectedPlaybackIp, start, end)
+                }
+            }
+            container.addView(button)
         }
     }
 
-    private fun testPlayback(name: String, ip: String, start: Date, end: Date, done: (String) -> Unit) {
+    private fun playRecording(ip: String, start: Date, end: Date) {
+        playbackPlayer?.release()
+        playbackPlayer = null
+        val view = playbackView ?: return
+
         val fmt = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
-        val uri = "rtsp://admin:123456@" + ip + ":554/cam/playback?channel=0&starttime=" + fmt.format(start) + "&endtime=" + fmt.format(end)
+        val uri = "rtsp://admin:123456@" + ip + ":554/cam/playback?channel=0&starttime=" +
+            fmt.format(start) + "&endtime=" + fmt.format(end)
+
         val player = ExoPlayer.Builder(this).build()
-        var finished = false
-        fun finish(result: String) {
-            if (finished) return
-            finished = true
-            player.release()
-            done(result)
-        }
+        playbackPlayer = player
+        view.player = player
         player.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) finish("OPNAME GEVONDEN")
+                if (state == Player.STATE_READY) {
+                    Toast.makeText(this@MainActivity, "▶️ Opname speelt af", Toast.LENGTH_SHORT).show()
+                }
             }
+
             override fun onPlayerError(error: PlaybackException) {
-                finish("geen playback-beeld")
+                Toast.makeText(this@MainActivity, "Geen beeld in dit tijdvak", Toast.LENGTH_SHORT).show()
             }
         })
+
         try {
-            val source = RtspMediaSource.Factory().setForceUseRtpTcp(true).createMediaSource(MediaItem.fromUri(uri))
+            val source = RtspMediaSource.Factory()
+                .setForceUseRtpTcp(true)
+                .createMediaSource(MediaItem.fromUri(uri))
             player.setMediaSource(source)
             player.prepare()
             player.playWhenReady = true
-            handler.postDelayed({ finish("geen playback-antwoord") }, 7000L)
         } catch (_: Exception) {
-            finish("geen playback-beeld")
+            Toast.makeText(this, "Opname kon niet worden gestart", Toast.LENGTH_SHORT).show()
+            player.release()
+            playbackPlayer = null
         }
+    }
+
+    private fun stopPlayback() {
+        playbackPlayer?.release()
+        playbackPlayer = null
+        playbackView?.player = null
+        playbackView = null
+        playbackDialog = null
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
