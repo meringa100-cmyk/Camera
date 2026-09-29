@@ -15,6 +15,7 @@ import android.view.WindowInsetsController
 import android.widget.*
 import android.graphics.Color
 import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.media3.common.*
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -43,6 +44,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var shot2: View
     private lateinit var backFullscreen: View
     private lateinit var switchFullscreen: View
+    private lateinit var recordings: View
+    private val recordingController = RecordingController("admin", "123456")
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
@@ -67,6 +70,8 @@ class MainActivity : ComponentActivity() {
         shot2 = findViewById(R.id.screenshot2)
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
+        recordings = findViewById(R.id.recordings)
+        recordings.setOnClickListener { inspectRecordings() }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -76,6 +81,19 @@ class MainActivity : ComponentActivity() {
         backFullscreen.setOnClickListener { exitFullscreen() }
         switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
         start()
+    }
+
+    private fun inspectRecordings() {
+        Toast.makeText(this, "SD-opnames controleren…", Toast.LENGTH_SHORT).show()
+        Thread {
+            val r1 = recordingController.inspect("192.168.2.26")
+            val r2 = recordingController.inspect("192.168.2.27")
+            runOnUiThread {
+                val a = if (r1.search != null || r1.replay != null || r1.recording != null) "ACHTERTUIN: opname-service gevonden" else "ACHTERTUIN: geen opname-service gevonden"
+                val b = if (r2.search != null || r2.replay != null || r2.recording != null) "VOORKANT: opname-service gevonden" else "VOORKANT: geen opname-service gevonden"
+                AlertDialog.Builder(this).setTitle("SD-opnames").setMessage("$a\n$b\n\nDit is de eerste controle. Als Replay/Search aanwezig is, bouwen we daarna de tijdlijn en afspelen in.").setPositiveButton("OK", null).show()
+            }
+        }.start()
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
