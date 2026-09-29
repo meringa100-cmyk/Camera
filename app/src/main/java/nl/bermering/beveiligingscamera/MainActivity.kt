@@ -85,53 +85,47 @@ class MainActivity : ComponentActivity() {
 
     private fun testSdPlayback() {
         Toast.makeText(this, "SD-opname testen…", Toast.LENGTH_SHORT).show()
-        Thread {
-            val end = Date()
-            val start = Date(end.time - 5 * 60 * 1000L)
-            val result1 = testPlayback("ACHTERTUIN", "192.168.2.26", start, end)
-            val result2 = testPlayback("VOORKANT", "192.168.2.27", start, end)
-            runOnUiThread {
+        val end = Date()
+        val start = Date(end.time - 5 * 60 * 1000L)
+        testPlayback("ACHTERTUIN", "192.168.2.26", start, end) { result1 ->
+            testPlayback("VOORKANT", "192.168.2.27", start, end) { result2 ->
                 AlertDialog.Builder(this)
                     .setTitle("SD-opname test")
-                    .setMessage(
-                        "Laatste 5 minuten getest\n\n" +
-                        "ACHTERTUIN: $result1\n" +
-                        "VOORKANT: $result2\n\n" +
-                        "Dit test rechtstreeks de mogelijke cam/playback-route. Als één camera beeld teruggeeft, kunnen we daarna de echte tijdlijn en afspelen bouwen."
-                    )
+                    .setMessage("Laatste 5 minuten getest\n\nACHTERTUIN: $result1\nVOORKANT: $result2\n\nDit was alleen een technische test. Als er beeld terugkomt, bouwen we daarna de echte tijdlijn.")
                     .setPositiveButton("OK", null)
                     .show()
             }
-        }.start()
+        }
     }
 
-    private fun testPlayback(name: String, ip: String, start: Date, end: Date): String {
+    private fun testPlayback(name: String, ip: String, start: Date, end: Date, done: (String) -> Unit) {
         val fmt = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.getDefault())
         val uri = "rtsp://admin:123456@" + ip + ":554/cam/playback?channel=0&starttime=" + fmt.format(start) + "&endtime=" + fmt.format(end)
-        var player: ExoPlayer? = null
-        var result = "geen antwoord"
-        val lock = Object()
+        val player = ExoPlayer.Builder(this).build()
+        var finished = false
+        fun finish(result: String) {
+            if (finished) return
+            finished = true
+            player.release()
+            done(result)
+        }
+        player.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_READY) finish("OPNAME GEVONDEN")
+            }
+            override fun onPlayerError(error: PlaybackException) {
+                finish("geen playback-beeld")
+            }
+        })
         try {
-            player = ExoPlayer.Builder(this).build()
             val source = RtspMediaSource.Factory().setForceUseRtpTcp(true).createMediaSource(MediaItem.fromUri(uri))
             player.setMediaSource(source)
-            player.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) {
-                    if (state == Player.STATE_READY) synchronized(lock) { result = "OPNAME GEVONDEN"; lock.notifyAll() }
-                }
-                override fun onPlayerError(error: PlaybackException) {
-                    synchronized(lock) { result = "geen playback-beeld"; lock.notifyAll() }
-                }
-            })
             player.prepare()
             player.playWhenReady = true
-            synchronized(lock) { if (result == "geen antwoord") lock.wait(7000L) }
+            handler.postDelayed({ finish("geen playback-antwoord") }, 7000L)
         } catch (_: Exception) {
-            result = "geen playback-beeld"
-        } finally {
-            player?.release()
+            finish("geen playback-beeld")
         }
-        return result
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
