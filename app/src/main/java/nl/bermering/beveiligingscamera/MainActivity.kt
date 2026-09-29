@@ -154,9 +154,6 @@ class MainActivity : ComponentActivity() {
             230
         ))
 
-        val timelineContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
         val scroll = ScrollView(this)
         scroll.addView(timelineContainer)
         root.addView(scroll, LinearLayout.LayoutParams(
