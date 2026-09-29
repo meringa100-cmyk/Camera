@@ -114,40 +114,82 @@ class PtzController(
     }
 
     private fun soap(endpoint: String, action: String, body: String): String? {
+        val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date())
+
+        // Different 360Eyes/EC101 firmware versions accept different ONVIF
+        // authentication methods. Try WS-Security Digest, then PasswordText,
+        // then HTTP Basic as a compatibility fallback.
+        val nonceBytes = UUID.randomUUID().toString().replace("-", "").take(16).toByteArray()
+        val digestInput = nonceBytes + now.toByteArray(StandardCharsets.UTF_8) + password.toByteArray(StandardCharsets.UTF_8)
+        val digest = Base64.encodeToString(
+            MessageDigest.getInstance("SHA-1").digest(digestInput),
+            Base64.NO_WRAP
+        )
+        val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP)
+
+        val digestEnvelope = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+                xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+                xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+              <s:Header><wsse:Security><wsse:UsernameToken>
+                <wsse:Username>$username</wsse:Username>
+                <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">$digest</wsse:Password>
+                <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">$nonce</wsse:Nonce>
+                <wsu:Created>$now</wsu:Created>
+              </wsse:UsernameToken></wsse:Security></s:Header>
+              <s:Body>$body</s:Body>
+            </s:Envelope>
+        """.trimIndent()
+
+        val textEnvelope = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+                xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+              <s:Header><wsse:Security><wsse:UsernameToken>
+                <wsse:Username>$username</wsse:Username>
+                <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">$password</wsse:Password>
+              </wsse:UsernameToken></wsse:Security></s:Header>
+              <s:Body>$body</s:Body>
+            </s:Envelope>
+        """.trimIndent()
+
+        request(endpoint, action, digestEnvelope)?.let { return it }
+        request(endpoint, action, textEnvelope)?.let { return it }
+
+        val basic = Base64.encodeToString(
+            "$username:$password".toByteArray(StandardCharsets.UTF_8),
+            Base64.NO_WRAP
+        )
+        return request(endpoint, action, body, "Basic $basic")
+    }
+
+    private fun request(
+        endpoint: String,
+        action: String,
+        body: String,
+        authorization: String? = null
+    ): String? {
         return try {
-            val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }.format(Date())
-            val nonceBytes = UUID.randomUUID().toString().replace("-", "").take(16).toByteArray()
-            val digestInput = nonceBytes + now.toByteArray(StandardCharsets.UTF_8) + password.toByteArray(StandardCharsets.UTF_8)
-            val digest = Base64.encodeToString(MessageDigest.getInstance("SHA-1").digest(digestInput), Base64.NO_WRAP)
-            val nonce = Base64.encodeToString(nonceBytes, Base64.NO_WRAP)
-
-            val envelope = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
-                    xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-                    xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
-                  <s:Header><wsse:Security><wsse:UsernameToken>
-                    <wsse:Username>$username</wsse:Username>
-                    <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">$digest</wsse:Password>
-                    <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">$nonce</wsse:Nonce>
-                    <wsu:Created>$now</wsu:Created>
-                  </wsse:UsernameToken></wsse:Security></s:Header>
-                  <s:Body>$body</s:Body>
-                </s:Envelope>
-            """.trimIndent()
-
             val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 connectTimeout = 3000
                 readTimeout = 4000
                 doOutput = true
                 setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action=\"$action\"")
+                if (authorization != null) setRequestProperty("Authorization", authorization)
             }
-            OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { it.write(envelope) }
-            val stream = if (connection.responseCode in 200..299) connection.inputStream else connection.errorStream
-            stream?.bufferedReader()?.use { it.readText() }.also { connection.disconnect() }
+            OutputStreamWriter(connection.outputStream, StandardCharsets.UTF_8).use { it.write(body) }
+            val code = connection.responseCode
+            if (code in 200..299) {
+                connection.inputStream.bufferedReader().use { it.readText() }.also { connection.disconnect() }
+            } else {
+                connection.errorStream?.close()
+                connection.disconnect()
+                null
+            }
         } catch (_: Exception) {
             null
         }
