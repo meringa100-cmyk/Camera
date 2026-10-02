@@ -3,15 +3,15 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="#080c0f"
-    android:padding="8dp"
+    android:padding="6dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <TextView
         android:id="@+id/appHeader"
-        android:text="📹 360Eyes Duo"
+        android:text="360EYES  •  LIVE CAMERA"
         android:textColor="#ffffff"
-        android:textSize="22sp"
+        android:textSize="20sp"
         android:textStyle="bold"
         android:gravity="center"
         android:layout_width="match_parent"
@@ -29,7 +29,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_margin="4dp">
+            android:layout_margin="3dp">
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player1"
@@ -42,7 +42,7 @@
                 android:textColor="#ffffff"
                 android:textStyle="bold"
                 android:textSize="16sp"
-                android:background="#99000000"
+                android:background="#CC000000"
                 android:padding="6dp"
                 android:layout_gravity="top|start"
                 android:layout_width="wrap_content"
@@ -130,20 +130,20 @@
 
     <Button
         android:id="@+id/reconnect"
-        android:text="↻ Opnieuw verbinden"
+        android:text="↻  OPNIEUW VERBINDEN"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
     <Button
         android:id="@+id/switchFullscreen"
-        android:text="⇄ Andere camera"
+        android:text="⇄  ANDERE CAMERA"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
     <Button
         android:id="@+id/backFullscreen"
-        android:text="↩ Terug naar 2 camera's"
+        android:text="↩  TERUG NAAR 2 CAMERA'S"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
