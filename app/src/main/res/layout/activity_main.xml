@@ -135,6 +135,12 @@
         android:layout_height="wrap_content"/>
 
     <Button
+        android:id="@+id/findCamera"
+        android:text="🔎  CAMERA ZOEKEN"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
         android:id="@+id/switchFullscreen"
         android:text="⇄  ANDERE CAMERA"
         android:visibility="gone"
