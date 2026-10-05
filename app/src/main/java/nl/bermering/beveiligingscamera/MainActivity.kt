@@ -13,6 +13,11 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.*
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.util.concurrent.Executors
 import android.graphics.Color
 import androidx.activity.ComponentActivity
 import androidx.media3.common.*
@@ -43,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var shot2: View
     private lateinit var backFullscreen: View
     private lateinit var switchFullscreen: View
+    private lateinit var findCamera: View
+    private val scanner = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
@@ -67,6 +74,7 @@ class MainActivity : ComponentActivity() {
         shot2 = findViewById(R.id.screenshot2)
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
+        findCamera = findViewById(R.id.findCamera)
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -75,7 +83,77 @@ class MainActivity : ComponentActivity() {
         shot2.setOnClickListener { takeScreenshot(v2, "Voorkant") }
         backFullscreen.setOnClickListener { exitFullscreen() }
         switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
+        findCamera.setOnClickListener { findOtherCamera() }
         start()
+    }
+
+    private fun findOtherCamera() {
+        findCamera.isEnabled = false
+        findCamera.alpha = 0.6f
+        Toast.makeText(this, "🔎 Netwerk wordt gescand…", Toast.LENGTH_SHORT).show()
+        scanner.execute {
+            val found = linkedSetOf<String>()
+            // ONVIF WS-Discovery: veel camera's reageren hier direct op.
+            try {
+                val socket = DatagramSocket()
+                socket.soTimeout = 900
+                val request = """<?xml version="1.0" encoding="utf-8"?><e:Envelope xmlns:e="http://www.w3.org/2003/05/soap-envelope" xmlns:w="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"><e:Header><w:MessageID>urn:uuid:360eyes-discovery</w:MessageID><w:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</w:To><w:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</w:Action></e:Header><e:Body><d:Probe><d:Types>dn:NetworkVideoTransmitter</d:Types></d:Probe></e:Body></e:Envelope>"""
+                    .replace("dn:", "dn:")
+                val bytes = request.toByteArray()
+                socket.send(DatagramPacket(bytes, bytes.size, InetSocketAddress("239.255.255.250", 3702)))
+                val end = System.currentTimeMillis() + 1500
+                while (System.currentTimeMillis() < end) {
+                    try {
+                        val buf = ByteArray(8192)
+                        val packet = DatagramPacket(buf, buf.size)
+                        socket.receive(packet)
+                        found.add(packet.address.hostAddress ?: "")
+                    } catch (_: Exception) { break }
+                }
+                socket.close()
+            } catch (_: Exception) { }
+
+            // Fallback: scan the local 192.168.2.x range for common camera ports.
+            for (i in 1..254) {
+                val ip = "192.168.2.$i"
+                if (ip == "192.168.2.26" || ip == "192.168.2.27") continue
+                if (found.contains(ip)) continue
+                if (quickPort(ip, 554, 120) || quickPort(ip, 80, 120) || quickPort(ip, 8899, 120)) {
+                    found.add(ip)
+                }
+            }
+
+            val candidates = found.filter { it.isNotBlank() && it != "192.168.2.26" && it != "192.168.2.27" }
+            runOnUiThread {
+                findCamera.isEnabled = true
+                findCamera.alpha = 1f
+                if (candidates.isEmpty()) {
+                    Toast.makeText(this, "Geen extra camera gevonden op 192.168.2.x", Toast.LENGTH_LONG).show()
+                } else {
+                    showFoundCameras(candidates)
+                }
+            }
+        }
+    }
+
+    private fun quickPort(ip: String, port: Int, timeout: Int): Boolean {
+        return try {
+            Socket().use { s ->
+                s.connect(InetSocketAddress(ip, port), timeout)
+                true
+            }
+        } catch (_: Exception) { false }
+    }
+
+    private fun showFoundCameras(candidates: List<String>) {
+        val text = candidates.joinToString("\\n") { ip ->
+            "$ip  • camera/netwerkpoort gevonden"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("🔎 Mogelijke camera gevonden")
+            .setMessage(text + "\\n\\nPoort 554 = RTSP, 80 = web, 8899 = vaak camera-service. We kunnen de juiste camera daarna testen.")
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
@@ -286,5 +364,10 @@ class MainActivity : ComponentActivity() {
         b?.release()
         a = null
         b = null
+    }
+
+    override fun onDestroy() {
+        scanner.shutdownNow()
+        super.onDestroy()
     }
 }
