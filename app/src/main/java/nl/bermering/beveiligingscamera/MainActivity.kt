@@ -49,6 +49,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var backFullscreen: View
     private lateinit var switchFullscreen: View
     private lateinit var findCamera: View
+    private lateinit var ptzStatus: TextView
+    private var selectedPtzCamera = 1
     private val scanner = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
@@ -75,6 +77,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen = findViewById(R.id.backFullscreen)
         switchFullscreen = findViewById(R.id.switchFullscreen)
         findCamera = findViewById(R.id.findCamera)
+        ptzStatus = findViewById(R.id.ptzStatus)
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -84,6 +87,13 @@ class MainActivity : ComponentActivity() {
         backFullscreen.setOnClickListener { exitFullscreen() }
         switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
         findCamera.setOnClickListener { findOtherCamera() }
+        findViewById<View>(R.id.ptzBackyard).setOnClickListener { selectedPtzCamera = 1; ptzStatus.text = "Besturing: ACHTERTUIN" }
+        findViewById<View>(R.id.ptzFront).setOnClickListener { selectedPtzCamera = 2; ptzStatus.text = "Besturing: VOORKANT" }
+        findViewById<View>(R.id.ptzUp).setOnClickListener { sendPtz(0f, 0.5f, false) }
+        findViewById<View>(R.id.ptzDown).setOnClickListener { sendPtz(0f, -0.5f, false) }
+        findViewById<View>(R.id.ptzLeft).setOnClickListener { sendPtz(-0.5f, 0f, false) }
+        findViewById<View>(R.id.ptzRight).setOnClickListener { sendPtz(0.5f, 0f, false) }
+        findViewById<View>(R.id.ptzStop).setOnClickListener { sendPtz(0f, 0f, true) }
         start()
     }
 
@@ -154,6 +164,31 @@ class MainActivity : ComponentActivity() {
             .setMessage(text + "\\n\\nPoort 554 = RTSP, 80 = web, 8899 = vaak camera-service. We kunnen de juiste camera daarna testen.")
             .setPositiveButton("OK", null)
             .show()
+    }
+
+    private fun sendPtz(pan: Float, tilt: Float, stop: Boolean) {
+        ptzStatus.text = "PTZ testen…"
+        scanner.execute {
+            val ip = if (selectedPtzCamera == 1) "192.168.2.26" else "192.168.2.27"
+            val action = if (stop) """<tptz:Stop><tptz:ProfileToken>Profile_1</tptz:ProfileToken><tptz:PanTilt>true</tptz:PanTilt><tptz:Zoom>true</tptz:Zoom></tptz:Stop>""" else """<tptz:ContinuousMove><tptz:ProfileToken>Profile_1</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="$pan" y="$tilt"/></tptz:Velocity></tptz:ContinuousMove>"""
+            val soap = """<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema"><s:Body>$action</s:Body></s:Envelope>"""
+            var ok = false
+            for (port in listOf(8899, 8080, 80, 5000)) {
+                for (path in listOf("/onvif/ptz_service", "/onvif/PTZ")) {
+                    try {
+                        val conn = (java.net.URL("http://$ip:$port$path").openConnection() as java.net.HttpURLConnection)
+                        conn.connectTimeout = 1000; conn.readTimeout = 1000; conn.requestMethod = "POST"; conn.doOutput = true
+                        conn.setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8")
+                        conn.outputStream.use { it.write(soap.toByteArray()) }
+                        ok = conn.responseCode in 200..299
+                        conn.disconnect()
+                        if (ok) break
+                    } catch (_: Exception) { }
+                }
+                if (ok) break
+            }
+            runOnUiThread { ptzStatus.text = if (ok) "Opdracht verzonden — controleer of de camera beweegt" else "Geen PTZ-antwoord. ONVIF kan een andere poort, login of profiel vereisen." }
+        }
     }
 
     private fun make(uri: String, camera: Int): ExoPlayer {
