@@ -140,6 +140,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
+    <TextView android:id="@+id/ptzStatus" android:text="PTZ-test: kies camera en druk op een pijl" android:textColor="#ffffff" android:gravity="center" android:padding="3dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    <LinearLayout android:orientation="horizontal" android:gravity="center" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/ptzBackyard" android:text="ACHTERTUIN" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/ptzFront" android:text="VOORKANT" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+    </LinearLayout>
+    <LinearLayout android:orientation="horizontal" android:gravity="center" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/ptzLeft" android:text="⬅" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/ptzUp" android:text="⬆" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/ptzDown" android:text="⬇" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/ptzRight" android:text="➡" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/ptzStop" android:text="STOP" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+    </LinearLayout>
     <Button
         android:id="@+id/switchFullscreen"
         android:text="⇄  ANDERE CAMERA"
