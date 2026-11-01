@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
 
-    private val u1 = "rtsp://admin:123456@192.168.2.26:554/cam/realmonitor?channel=0&subtype=1"
+    private val u1 = "rtsp://admin:123456@192.168.2.36:554/cam/realmonitor?channel=0&subtype=1"
     private val u2 = "rtsp://admin:123456@192.168.2.27:554/cam/realmonitor?channel=0&subtype=1"
 
     override fun onCreate(x: Bundle?) {
@@ -126,14 +126,14 @@ class MainActivity : ComponentActivity() {
             // Fallback: scan the local 192.168.2.x range for common camera ports.
             for (i in 1..254) {
                 val ip = "192.168.2.$i"
-                if (ip == "192.168.2.26" || ip == "192.168.2.27") continue
+                if (ip == "192.168.2.36" || ip == "192.168.2.27") continue
                 if (found.contains(ip)) continue
                 if (quickPort(ip, 554, 120) || quickPort(ip, 80, 120) || quickPort(ip, 8899, 120)) {
                     found.add(ip)
                 }
             }
 
-            val candidates = found.filter { it.isNotBlank() && it != "192.168.2.26" && it != "192.168.2.27" }
+            val candidates = found.filter { it.isNotBlank() && it != "192.168.2.36" && it != "192.168.2.27" }
             runOnUiThread {
                 findCamera.isEnabled = true
                 findCamera.alpha = 1f
@@ -169,7 +169,7 @@ class MainActivity : ComponentActivity() {
     private fun sendPtz(pan: Float, tilt: Float, stop: Boolean) {
         ptzStatus.text = "PTZ testen…"
         scanner.execute {
-            val ip = if (selectedPtzCamera == 1) "192.168.2.26" else "192.168.2.27"
+            val ip = if (selectedPtzCamera == 1) "192.168.2.36" else "192.168.2.27"
             val action = if (stop) """<tptz:Stop><tptz:ProfileToken>Profile_1</tptz:ProfileToken><tptz:PanTilt>true</tptz:PanTilt><tptz:Zoom>true</tptz:Zoom></tptz:Stop>""" else """<tptz:ContinuousMove><tptz:ProfileToken>Profile_1</tptz:ProfileToken><tptz:Velocity><tt:PanTilt x="$pan" y="$tilt"/></tptz:Velocity></tptz:ContinuousMove>"""
             val soap = """<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema"><s:Body>$action</s:Body></s:Envelope>"""
             var ok = false
