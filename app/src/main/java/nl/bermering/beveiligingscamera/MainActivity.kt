@@ -51,6 +51,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var switchFullscreen: View
     private lateinit var findCamera: View
     private lateinit var ptzStatus: TextView
+    private lateinit var ptzPanel: View
+    private lateinit var togglePtz: Button
     private var selectedPtzCamera = 1
     private val scanner = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
@@ -79,6 +81,13 @@ class MainActivity : ComponentActivity() {
         switchFullscreen = findViewById(R.id.switchFullscreen)
         findCamera = findViewById(R.id.findCamera)
         ptzStatus = findViewById(R.id.ptzStatus)
+        ptzPanel = findViewById(R.id.ptzPanel)
+        togglePtz = findViewById(R.id.togglePtz)
+        togglePtz.setOnClickListener {
+            val opening = ptzPanel.visibility != View.VISIBLE
+            ptzPanel.visibility = if (opening) View.VISIBLE else View.GONE
+            togglePtz.text = if (opening) "⚙  CAMERA BEDIENEN  ▴" else "⚙  CAMERA BEDIENEN  ▾"
+        }
 
         reconnect.setOnClickListener { start() }
         v1.setOnClickListener { toggleFullscreen(1) }
@@ -216,12 +225,15 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onPlayerError(e: PlaybackException) {
+                val detail = e.cause?.message?.take(42)
+                    ?: e.errorCodeName.replace("ERROR_CODE_", "").replace("_", " ")
+                val message = "● FOUT: $detail"
                 if (camera == 1) {
-                    st1.text = "● VERBINDING VERLOREN"
+                    st1.text = message
                     st1.setTextColor(Color.RED)
                     scheduleRetry(1)
                 } else {
-                    st2.text = "● VERBINDING VERLOREN"
+                    st2.text = message
                     st2.setTextColor(Color.RED)
                     scheduleRetry(2)
                 }
