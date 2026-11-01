@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:background="#080c0f"
-    android:padding="6dp"
+    android:padding="5dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -11,11 +11,11 @@
         android:id="@+id/appHeader"
         android:text="360EYES  •  LIVE CAMERA"
         android:textColor="#ffffff"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:textStyle="bold"
         android:gravity="center"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="36dp"/>
 
     <LinearLayout
         android:id="@+id/cameraRow"
@@ -29,11 +29,14 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_margin="3dp">
+            android:layout_margin="3dp"
+            android:background="#151a1e">
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player1"
                 app:surface_type="texture_view"
+                app:use_controller="false"
+                app:resize_mode="fit"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
@@ -41,7 +44,7 @@
                 android:text="ACHTERTUIN"
                 android:textColor="#ffffff"
                 android:textStyle="bold"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:background="#CC000000"
                 android:padding="6dp"
                 android:layout_gravity="top|start"
@@ -51,10 +54,10 @@
             <Button
                 android:id="@+id/screenshot1"
                 android:text="📸"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:padding="8dp"
+                android:padding="5dp"
                 android:contentDescription="Foto achtertuin"
                 android:layout_gravity="top|end"
                 android:layout_width="wrap_content"
@@ -62,7 +65,8 @@
 
             <TextView
                 android:id="@+id/status1"
-                android:text="● Verbinden…"
+                android:text="● VERBINDEN…"
+                android:textSize="12sp"
                 android:textColor="#ffffff"
                 android:background="#99000000"
                 android:padding="5dp"
@@ -76,11 +80,14 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_margin="4dp">
+            android:layout_margin="3dp"
+            android:background="#151a1e">
 
             <androidx.media3.ui.PlayerView
                 android:id="@+id/player2"
                 app:surface_type="texture_view"
+                app:use_controller="false"
+                app:resize_mode="fit"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
 
@@ -88,8 +95,8 @@
                 android:text="VOORKANT"
                 android:textColor="#ffffff"
                 android:textStyle="bold"
-                android:textSize="16sp"
-                android:background="#99000000"
+                android:textSize="14sp"
+                android:background="#CC000000"
                 android:padding="6dp"
                 android:layout_gravity="top|start"
                 android:layout_width="wrap_content"
@@ -98,10 +105,10 @@
             <Button
                 android:id="@+id/screenshot2"
                 android:text="📸"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:minWidth="0dp"
                 android:minHeight="0dp"
-                android:padding="8dp"
+                android:padding="5dp"
                 android:contentDescription="Foto voorkant"
                 android:layout_gravity="top|end"
                 android:layout_width="wrap_content"
@@ -109,7 +116,8 @@
 
             <TextView
                 android:id="@+id/status2"
-                android:text="● Verbinden…"
+                android:text="● VERBINDEN…"
+                android:textSize="12sp"
                 android:textColor="#ffffff"
                 android:background="#99000000"
                 android:padding="5dp"
@@ -121,47 +129,96 @@
 
     <TextView
         android:id="@+id/status"
-        android:text="Beide camera's starten…"
+        android:text="Camera's verbinden…"
         android:textColor="#ffffff"
+        android:textSize="13sp"
         android:gravity="center"
-        android:padding="5dp"
+        android:padding="3dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button
+            android:id="@+id/reconnect"
+            android:text="↻ OPNIEUW VERBINDEN"
+            android:textSize="12sp"
+            android:minHeight="44dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+        <Button
+            android:id="@+id/findCamera"
+            android:text="⌕ CAMERA ZOEKEN"
+            android:textSize="12sp"
+            android:minHeight="44dp"
+            android:layout_marginStart="5dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
 
     <Button
-        android:id="@+id/reconnect"
-        android:text="↻  OPNIEUW VERBINDEN"
+        android:id="@+id/togglePtz"
+        android:text="⚙  CAMERA BEDIENEN  ▾"
+        android:textSize="12sp"
+        android:minHeight="40dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
-    <Button
-        android:id="@+id/findCamera"
-        android:text="🔎  CAMERA ZOEKEN"
+    <LinearLayout
+        android:id="@+id/ptzPanel"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="#151a1e"
+        android:padding="3dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content">
 
-    <TextView android:id="@+id/ptzStatus" android:text="PTZ-test: kies camera en druk op een pijl" android:textColor="#ffffff" android:gravity="center" android:padding="3dp" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-    <LinearLayout android:orientation="horizontal" android:gravity="center" android:layout_width="match_parent" android:layout_height="wrap_content">
-        <Button android:id="@+id/ptzBackyard" android:text="ACHTERTUIN" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-        <Button android:id="@+id/ptzFront" android:text="VOORKANT" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
+        <TextView
+            android:id="@+id/ptzStatus"
+            android:text="Kies een camera en gebruik de pijlen"
+            android:textColor="#ffffff"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:padding="2dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/ptzBackyard" android:text="ACHTERTUIN" android:textSize="11sp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"/>
+            <Button android:id="@+id/ptzFront" android:text="VOORKANT" android:textSize="11sp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"/>
+        </LinearLayout>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <Button android:id="@+id/ptzLeft" android:text="←" android:layout_width="0dp" android:layout_weight="1" android:layout_height="42dp"/>
+            <Button android:id="@+id/ptzUp" android:text="↑" android:layout_width="0dp" android:layout_weight="1" android:layout_height="42dp"/>
+            <Button android:id="@+id/ptzDown" android:text="↓" android:layout_width="0dp" android:layout_weight="1" android:layout_height="42dp"/>
+            <Button android:id="@+id/ptzRight" android:text="→" android:layout_width="0dp" android:layout_weight="1" android:layout_height="42dp"/>
+            <Button android:id="@+id/ptzStop" android:text="STOP" android:textSize="11sp" android:layout_width="0dp" android:layout_weight="1" android:layout_height="42dp"/>
+        </LinearLayout>
     </LinearLayout>
-    <LinearLayout android:orientation="horizontal" android:gravity="center" android:layout_width="match_parent" android:layout_height="wrap_content">
-        <Button android:id="@+id/ptzLeft" android:text="⬅" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-        <Button android:id="@+id/ptzUp" android:text="⬆" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-        <Button android:id="@+id/ptzDown" android:text="⬇" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-        <Button android:id="@+id/ptzRight" android:text="➡" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-        <Button android:id="@+id/ptzStop" android:text="STOP" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"/>
-    </LinearLayout>
+
     <Button
         android:id="@+id/switchFullscreen"
-        android:text="⇄  ANDERE CAMERA"
+        android:text="⇄ ANDERE CAMERA"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
 
     <Button
         android:id="@+id/backFullscreen"
-        android:text="↩  TERUG NAAR 2 CAMERA'S"
+        android:text="↩ TERUG NAAR 2 CAMERA'S"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"/>
