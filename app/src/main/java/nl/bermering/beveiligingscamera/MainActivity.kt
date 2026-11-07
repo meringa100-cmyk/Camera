@@ -243,6 +243,31 @@ class MainActivity : ComponentActivity() {
         p.setMediaSource(s)
         p.prepare()
         p.playWhenReady = true
+
+        // Diagnose a stream that stays in BUFFERING without returning an error.
+        handler.postDelayed({
+            val isCurrentPlayer = if (camera == 1) a === p else b === p
+            if (isCurrentPlayer && p.playbackState != Player.STATE_READY &&
+                p.playbackState == Player.STATE_BUFFERING) {
+                scanner.execute {
+                    val ip = if (camera == 1) "192.168.2.36" else "192.168.2.27"
+                    val reachable = quickPort(ip, 554, 1800)
+                    runOnUiThread {
+                        val stillCurrent = if (camera == 1) a === p else b === p
+                        if (stillCurrent && p.playbackState != Player.STATE_READY) {
+                            val result = if (reachable)
+                                "● POORT 554 OPEN • RTSP-STREAM BLOKKEERT"
+                            else
+                                "● POORT 554 NIET BEREIKBAAR"
+                            val statusView = if (camera == 1) st1 else st2
+                            statusView.text = result
+                            statusView.setTextColor(Color.RED)
+                            updateOverall()
+                        }
+                    }
+                }
+            }
+        }, 12_000L)
         return p
     }
 
