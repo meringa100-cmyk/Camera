@@ -259,23 +259,28 @@ class MainActivity : ComponentActivity() {
                 p.playbackState == Player.STATE_BUFFERING) {
                 scanner.execute {
                     val ip = if (camera == 1) "192.168.2.36" else "192.168.2.27"
-                    val reachable = quickPort(ip, 554, 1800)
+                    val ports = listOf(554, 8554, 10554, 80, 8080, 8000, 8899, 5000, 34567, 37777)
+                    val openPorts = ports.filter { quickPort(ip, it, 650) }
                     runOnUiThread {
                         val stillCurrent = if (camera == 1) a === p else b === p
                         if (stillCurrent && p.playbackState != Player.STATE_READY) {
-                            val result = if (reachable)
-                                "● RTSP TIME-OUT • tik voor details"
+                            val result = if (openPorts.contains(554))
+                                "● RTSP-POORT OPEN • tik voor details"
                             else
-                                "● CAMERA NIET BEREIKBAAR • tik voor details"
+                                "● RTSP-POORT DICHT • tik voor details"
                             val report = buildString {
-                                append("RTSP-verbinding loopt vast na 12 seconden.\n")
-                                append("IP: $ip\nTCP-poort 554: ")
-                                append(if (reachable) "OPEN (camera bereikbaar)" else "NIET BEREIKBAAR")
-                                append("\n\n")
-                                append(if (reachable)
-                                    "De netwerkpoort reageert, maar de RTSP-stream levert geen beeld. Dit kan passen bij een afwijkend RTSP-pad, authenticatieprobleem, streamprofiel of protocolonderhandeling. Een open poort bewijst niet dat RTSP-inloggen lukt."
+                                append("Lokale TCP-poortscan achtertuincamera\\n")
+                                append("IP-adres: $ip\\n")
+                                append("Geteste poorten: ${ports.joinToString(", ")}\\n\\n")
+                                append("Reagerende poorten: ")
+                                append(if (openPorts.isEmpty()) "geen van de geteste poorten" else openPorts.joinToString(", "))
+                                append("\\n\\n")
+                                append(if (openPorts.contains(554))
+                                    "Poort 554 accepteert TCP, maar de RTSP-stream gaf eerder geen beeld. We moeten dan het RTSP-pad, de aanmeldgegevens of streamonderhandeling onderzoeken."
+                                    else if (openPorts.isNotEmpty())
+                                    "De camera reageert op andere poorten, maar niet op de standaard RTSP-poort 554. Dit is een aanwijzing voor een afwijkende dienst/poort; het bewijst nog niet dat een van de open poorten RTSP is."
                                     else
-                                    "De telefoon krijgt geen TCP-verbinding met poort 554. Controleer netwerkroute, camera-IP, wifi/VLAN of RTSP-poort. De camera-instellingen zijn niet gewijzigd.")
+                                    "Geen van deze TCP-poorten reageert op dit IP-adres. Mogelijk gebruikt de originele 360Eyes-app cloud/P2P, of is lokale toegang/firewall/netwerksegmentatie de oorzaak. De camera-instellingen zijn niet gewijzigd.")
                             }
                             val statusView = if (camera == 1) st1 else st2
                             if (camera == 1) diagnostic1 = report else diagnostic2 = report
