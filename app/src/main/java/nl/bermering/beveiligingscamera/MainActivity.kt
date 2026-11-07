@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private val scanner = Executors.newSingleThreadExecutor()
     private val handler = Handler(Looper.getMainLooper())
     private var fullScreenCamera = 0
+    private var diagnostic1 = "Nog geen diagnose beschikbaar"
+    private var diagnostic2 = "Nog geen diagnose beschikbaar"
 
     private val u1 = "rtsp://admin:123456@192.168.2.36:554/cam/realmonitor?channel=0&subtype=1"
     private val u2 = "rtsp://admin:123456@192.168.2.27:554/cam/realmonitor?channel=0&subtype=1"
@@ -90,6 +92,8 @@ class MainActivity : ComponentActivity() {
         }
 
         reconnect.setOnClickListener { start() }
+        st1.setOnClickListener { showDiagnostic(1) }
+        st2.setOnClickListener { showDiagnostic(2) }
         v1.setOnClickListener { toggleFullscreen(1) }
         v2.setOnClickListener { toggleFullscreen(2) }
         shot1.setOnClickListener { takeScreenshot(v1, "Achtertuin") }
@@ -225,15 +229,19 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onPlayerError(e: PlaybackException) {
-                val detail = e.cause?.message?.take(42)
-                    ?: e.errorCodeName.replace("ERROR_CODE_", "").replace("_", " ")
-                val message = "● FOUT: $detail"
+                val chain = generateSequence<Throwable>(e) { it.cause }
+                    .take(6)
+                    .map { "${it.javaClass.simpleName}: ${it.message ?: "(geen melding)"}" }
+                    .joinToString("\n")
+                val report = "RTSP-fout\nPlayer-code: ${e.errorCodeName} (${e.errorCode})\nOorzaak: $chain"
                 if (camera == 1) {
-                    st1.text = message
+                    diagnostic1 = report
+                    st1.text = "● RTSP-FOUT • tik voor details"
                     st1.setTextColor(Color.RED)
                     scheduleRetry(1)
                 } else {
-                    st2.text = message
+                    diagnostic2 = report
+                    st2.text = "● RTSP-FOUT • tik voor details"
                     st2.setTextColor(Color.RED)
                     scheduleRetry(2)
                 }
@@ -256,10 +264,21 @@ class MainActivity : ComponentActivity() {
                         val stillCurrent = if (camera == 1) a === p else b === p
                         if (stillCurrent && p.playbackState != Player.STATE_READY) {
                             val result = if (reachable)
-                                "● POORT 554 OPEN • RTSP-STREAM BLOKKEERT"
+                                "● RTSP TIME-OUT • tik voor details"
                             else
-                                "● POORT 554 NIET BEREIKBAAR"
+                                "● CAMERA NIET BEREIKBAAR • tik voor details"
+                            val report = buildString {
+                                append("RTSP-verbinding loopt vast na 12 seconden.\n")
+                                append("IP: $ip\nTCP-poort 554: ")
+                                append(if (reachable) "OPEN (camera bereikbaar)" else "NIET BEREIKBAAR")
+                                append("\n\n")
+                                append(if (reachable)
+                                    "De netwerkpoort reageert, maar de RTSP-stream levert geen beeld. Dit kan passen bij een afwijkend RTSP-pad, authenticatieprobleem, streamprofiel of protocolonderhandeling. Een open poort bewijst niet dat RTSP-inloggen lukt."
+                                    else
+                                    "De telefoon krijgt geen TCP-verbinding met poort 554. Controleer netwerkroute, camera-IP, wifi/VLAN of RTSP-poort. De camera-instellingen zijn niet gewijzigd.")
+                            }
                             val statusView = if (camera == 1) st1 else st2
+                            if (camera == 1) diagnostic1 = report else diagnostic2 = report
                             statusView.text = result
                             statusView.setTextColor(Color.RED)
                             updateOverall()
@@ -269,6 +288,15 @@ class MainActivity : ComponentActivity() {
             }
         }, 12_000L)
         return p
+    }
+
+    private fun showDiagnostic(camera: Int) {
+        val report = if (camera == 1) diagnostic1 else diagnostic2
+        AlertDialog.Builder(this)
+            .setTitle(if (camera == 1) "Diagnose achtertuincamera" else "Diagnose voorkantcamera")
+            .setMessage(report)
+            .setPositiveButton("OK", null)
+            .show()
     }
 
     private fun takeScreenshot(playerView: PlayerView, cameraName: String) {
