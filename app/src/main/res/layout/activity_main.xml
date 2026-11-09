@@ -162,6 +162,14 @@
     </LinearLayout>
 
     <Button
+        android:id="@+id/testRecordings"
+        android:text="SD-OPNAMEN / ONVIF TESTEN"
+        android:textSize="12sp"
+        android:minHeight="40dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <Button
         android:id="@+id/togglePtz"
         android:text="⚙  CAMERA BEDIENEN  ▾"
         android:textSize="12sp"
