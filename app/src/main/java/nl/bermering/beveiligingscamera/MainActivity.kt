@@ -122,33 +122,37 @@ class MainActivity : ComponentActivity() {
             for (entry in listOf(Pair("Achtertuin", "192.168.2.36"), Pair("Voorkant", "192.168.2.27"))) {
                 val name = entry.first
                 val ip = entry.second
-                report.append("\\n===== " + name + " (" + ip + ") =====\\n")
+                report.append("\n===== " + name + " (" + ip + ") =====\n")
                 var found = false
-                for (port in listOf(80, 8899, 8080, 8000, 5000)) {
+                for (port in listOf(8080, 80, 8899, 8000, 5000)) {
                     for (path in listOf("/onvif/device_service", "/onvif/device_service/")) {
                         try {
                             val conn = java.net.URL("http://" + ip + ":" + port + path).openConnection() as java.net.HttpURLConnection
-                            conn.connectTimeout = 1400
-                            conn.readTimeout = 2200
+                            conn.connectTimeout = 1800
+                            conn.readTimeout = 3000
                             conn.requestMethod = "POST"
                             conn.doOutput = true
-                            conn.setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8")
+                            conn.setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action=\"http://www.onvif.org/ver10/device/wsdl/GetServices\"")
+                            conn.setRequestProperty("Accept", "application/soap+xml, text/xml")
                             val soap = """<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl"><s:Body><tds:GetServices><tds:IncludeCapability>false</tds:IncludeCapability></tds:GetServices></s:Body></s:Envelope>"""
                             conn.outputStream.use { it.write(soap.toByteArray(Charsets.UTF_8)) }
                             val code = conn.responseCode
                             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                             val body = try { stream?.bufferedReader()?.use { it.readText() } ?: "" } catch (_: Exception) { "" }
                             if (code == 401) {
-                                report.append("ONVIF-pad gevonden op poort " + port + ", maar login vereist (HTTP 401).\\n")
+                                report.append("ONVIF-pad op poort " + port + ", maar authenticatie geweigerd (HTTP 401).\n")
                                 found = true
-                            } else if (body.contains("GetServicesResponse") || body.contains("www.onvif.org")) {
+                            } else if (body.contains("Envelope") || body.contains("Fault") || body.contains("www.onvif.org")) {
                                 found = true
-                                report.append("ONVIF antwoord op poort " + port + " (HTTP " + code + ").\\n")
-                                report.append("Recording-service: " + body.contains("recording", true) + "\\n")
-                                report.append("Replay-service: " + body.contains("replay", true) + "\\n")
-                                report.append("Search-service: " + body.contains("search", true) + "\\n")
-                                val addresses = Regex("""https?://[^<"\\s]+""").findAll(body).map { it.value }.distinct().toList()
-                                if (addresses.isNotEmpty()) report.append("Service-adressen: " + addresses.take(8).joinToString(" | ") + "\\n")
+                                report.append("ONVIF-endpoint antwoordt op poort " + port + " (HTTP " + code + ").\n")
+                                val fault = Regex("<[^>]*Fault[^>]*>(.*?)</[^>]*Fault>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL).find(body)?.groupValues?.get(1)
+                                if (fault != null) report.append("SOAP-fout: " + fault.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(500) + "\n")
+                                report.append("Recording-service: " + body.contains("recording", true) + "\n")
+                                report.append("Replay-service: " + body.contains("replay", true) + "\n")
+                                report.append("Search-service: " + body.contains("search", true) + "\n")
+                                val xaddrs = Regex("<[^>]*XAddr[^>]*>(.*?)</[^>]*XAddr>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL).findAll(body).map { it.groupValues[1].trim() }.distinct().toList()
+                                if (xaddrs.isNotEmpty()) report.append("Service-adressen:\n" + xaddrs.take(10).joinToString("\n") + "\n")
+                                if (fault == null && xaddrs.isEmpty()) report.append("Antwoordfragment: " + body.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(650) + "\n")
                             }
                             conn.disconnect()
                             if (found) break
@@ -156,7 +160,7 @@ class MainActivity : ComponentActivity() {
                     }
                     if (found) break
                 }
-                if (!found) report.append("Geen ONVIF Device-service gevonden op de geteste poorten/paden. Een eigen 360Eyes-protocol is hiermee niet uitgesloten.\\n")
+                if (!found) report.append("Geen ONVIF SOAP-antwoord gevonden op de geteste poorten/paden.\n")
             }
             runOnUiThread {
                 button.isEnabled = true
