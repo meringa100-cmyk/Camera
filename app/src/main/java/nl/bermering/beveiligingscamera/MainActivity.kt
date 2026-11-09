@@ -235,14 +235,16 @@ class MainActivity : ComponentActivity() {
                     .joinToString("\n")
                 val report = "RTSP-fout\nPlayer-code: ${e.errorCodeName} (${e.errorCode})\nOorzaak: $chain"
                 if (camera == 1) {
-                    diagnostic1 = report
-                    st1.text = "● RTSP-FOUT • tik voor details"
+                    diagnostic1 = report + "\n\nPoortscan wordt gestart…"
+                    st1.text = "● RTSP-FOUT • poortscan loopt"
                     st1.setTextColor(Color.RED)
+                    scanCameraPorts(1, "192.168.2.36")
                     scheduleRetry(1)
                 } else {
-                    diagnostic2 = report
-                    st2.text = "● RTSP-FOUT • tik voor details"
+                    diagnostic2 = report + "\n\nPoortscan wordt gestart…"
+                    st2.text = "● RTSP-FOUT • poortscan loopt"
                     st2.setTextColor(Color.RED)
+                    scanCameraPorts(2, "192.168.2.27")
                     scheduleRetry(2)
                 }
                 updateOverall()
@@ -293,6 +295,33 @@ class MainActivity : ComponentActivity() {
             }
         }, 12_000L)
         return p
+    }
+
+    private fun scanCameraPorts(camera: Int, ip: String) {
+        scanner.execute {
+            val ports = listOf(554, 8554, 10554, 80, 8080, 8000, 8899, 5000, 34567, 37777)
+            val openPorts = ports.filter { quickPort(ip, it, 650) }
+            val report = buildString {
+                append("Automatische TCP-poortscan na verbindingsfout\\n")
+                append("IP-adres: $ip\\n")
+                append("Geteste poorten: ${ports.joinToString(", ")}\\n\\n")
+                append("Reagerende poorten: ")
+                append(if (openPorts.isEmpty()) "geen van de geteste poorten" else openPorts.joinToString(", "))
+                append("\\n\\n")
+                append(if (openPorts.contains(554))
+                    "Poort 554 accepteert TCP. We moeten dan het RTSP-pad, de aanmeldgegevens of streamonderhandeling onderzoeken."
+                    else if (openPorts.isNotEmpty())
+                    "De camera reageert op andere poorten, maar niet op RTSP-poort 554. Een open poort bewijst nog niet dat daar RTSP op draait."
+                    else
+                    "Geen van deze TCP-poorten reageert op dit IP-adres. Mogelijk gebruikt de originele 360Eyes-app cloud/P2P, of is lokale toegang/firewall/netwerksegmentatie de oorzaak. Camera-instellingen zijn niet gewijzigd.")
+            }
+            runOnUiThread {
+                if (camera == 1) diagnostic1 = report else diagnostic2 = report
+                val statusView = if (camera == 1) st1 else st2
+                statusView.text = "● POORTSCAN KLAAR • tik voor details"
+                statusView.setTextColor(Color.RED)
+            }
+        }
     }
 
     private fun showDiagnostic(camera: Int) {
