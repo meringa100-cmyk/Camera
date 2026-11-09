@@ -161,6 +161,7 @@
             android:layout_height="wrap_content"/>
     </LinearLayout>
 
+    <!-- Read-only ONVIF SD-card recording diagnostic -->
     <Button
         android:id="@+id/testRecordings"
         android:text="SD-OPNAMEN / ONVIF TESTEN"
