@@ -101,6 +101,7 @@ class MainActivity : ComponentActivity() {
         backFullscreen.setOnClickListener { exitFullscreen() }
         switchFullscreen.setOnClickListener { if (fullScreenCamera == 1) toggleFullscreen(2) else if (fullScreenCamera == 2) toggleFullscreen(1) }
         findCamera.setOnClickListener { findOtherCamera() }
+        findViewById<View>(R.id.testRecordings).setOnClickListener { testOnvifRecordings() }
         findViewById<View>(R.id.ptzBackyard).setOnClickListener { selectedPtzCamera = 1; ptzStatus.text = "Besturing: ACHTERTUIN" }
         findViewById<View>(R.id.ptzFront).setOnClickListener { selectedPtzCamera = 2; ptzStatus.text = "Besturing: VOORKANT" }
         findViewById<View>(R.id.ptzUp).setOnClickListener { sendPtz(0f, 0.5f, false) }
@@ -109,6 +110,61 @@ class MainActivity : ComponentActivity() {
         findViewById<View>(R.id.ptzRight).setOnClickListener { sendPtz(0.5f, 0f, false) }
         findViewById<View>(R.id.ptzStop).setOnClickListener { sendPtz(0f, 0f, true) }
         start()
+    }
+
+
+    private fun testOnvifRecordings() {
+        val button = findViewById<Button>(R.id.testRecordings)
+        button.isEnabled = false
+        button.text = "ONVIF-TEST BEZIG…"
+        scanner.execute {
+            val report = StringBuilder()
+            for (entry in listOf(Pair("Achtertuin", "192.168.2.36"), Pair("Voorkant", "192.168.2.27"))) {
+                val name = entry.first
+                val ip = entry.second
+                report.append("\\n===== " + name + " (" + ip + ") =====\\n")
+                var found = false
+                for (port in listOf(80, 8899, 8080, 8000, 5000)) {
+                    for (path in listOf("/onvif/device_service", "/onvif/device_service/")) {
+                        try {
+                            val conn = java.net.URL("http://" + ip + ":" + port + path).openConnection() as java.net.HttpURLConnection
+                            conn.connectTimeout = 1400
+                            conn.readTimeout = 2200
+                            conn.requestMethod = "POST"
+                            conn.doOutput = true
+                            conn.setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8")
+                            val soap = """<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl"><s:Body><tds:GetServices><tds:IncludeCapability>false</tds:IncludeCapability></tds:GetServices></s:Body></s:Envelope>"""
+                            conn.outputStream.use { it.write(soap.toByteArray(Charsets.UTF_8)) }
+                            val code = conn.responseCode
+                            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                            val body = try { stream?.bufferedReader()?.use { it.readText() } ?: "" } catch (_: Exception) { "" }
+                            if (code == 401) {
+                                report.append("ONVIF-pad gevonden op poort " + port + ", maar login vereist (HTTP 401).\\n")
+                                found = true
+                            } else if (body.contains("GetServicesResponse") || body.contains("www.onvif.org")) {
+                                found = true
+                                report.append("ONVIF antwoord op poort " + port + " (HTTP " + code + ").\\n")
+                                report.append("Recording-service: " + body.contains("recording", true) + "\\n")
+                                report.append("Replay-service: " + body.contains("replay", true) + "\\n")
+                                report.append("Search-service: " + body.contains("search", true) + "\\n")
+                                val addresses = Regex("""https?://[^<"\\s]+""").findAll(body).map { it.value }.distinct().toList()
+                                if (addresses.isNotEmpty()) report.append("Service-adressen: " + addresses.take(8).joinToString(" | ") + "\\n")
+                            }
+                            conn.disconnect()
+                            if (found) break
+                        } catch (_: Exception) { }
+                    }
+                    if (found) break
+                }
+                if (!found) report.append("Geen ONVIF Device-service gevonden op de geteste poorten/paden. Een eigen 360Eyes-protocol is hiermee niet uitgesloten.\\n")
+            }
+            runOnUiThread {
+                button.isEnabled = true
+                button.text = "SD-OPNAMEN / ONVIF TESTEN"
+                AlertDialog.Builder(this).setTitle("Onderzoek SD-opnames")
+                    .setMessage(report.toString()).setPositiveButton("OK", null).show()
+            }
+        }
     }
 
     private fun findOtherCamera() {
