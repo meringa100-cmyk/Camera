@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
                                 report.append("Recording-service: " + body.contains("recording", true) + "\n")
                                 report.append("Replay-service: " + body.contains("replay", true) + "\n")
                                 report.append("Search-service: " + body.contains("search", true) + "\n")
-                                val xaddrs = Regex("<[^>]*XAddr[^>]*>(.*?)</[^>]*XAddr>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL).findAll(body).map { it.groupValues[1].trim() }.distinct().toList()
+                                val xaddrs = Regex("<[^>]*XAddr[^>]*>(.*?)</[^>]*XAddr>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).findAll(body).map { it.groupValues[1].trim() }.distinct().toList()
                                 if (xaddrs.isNotEmpty()) report.append("Service-adressen:\n" + xaddrs.take(10).joinToString("\n") + "\n")
                                 if (fault == null && xaddrs.isEmpty()) report.append("Antwoordfragment: " + body.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(650) + "\n")
                             }
