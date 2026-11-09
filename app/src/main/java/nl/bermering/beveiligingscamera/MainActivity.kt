@@ -301,19 +301,26 @@ class MainActivity : ComponentActivity() {
         scanner.execute {
             val ports = listOf(554, 8554, 10554, 80, 8080, 8000, 8899, 5000, 34567, 37777)
             val openPorts = ports.filter { quickPort(ip, it, 650) }
+            val rtspChecks = openPorts.map { port -> port to probeRtsp(ip, port) }
+            val rtspPorts = rtspChecks.filter { it.second.startsWith("RTSP/") }
             val report = buildString {
-                append("Automatische TCP-poortscan na verbindingsfout\\n")
+                append("Automatische TCP- en RTSP-controle na verbindingsfout\\n")
                 append("IP-adres: $ip\\n")
-                append("Geteste poorten: ${ports.joinToString(", ")}\\n\\n")
-                append("Reagerende poorten: ")
-                append(if (openPorts.isEmpty()) "geen van de geteste poorten" else openPorts.joinToString(", "))
-                append("\\n\\n")
-                append(if (openPorts.contains(554))
-                    "Poort 554 accepteert TCP. We moeten dan het RTSP-pad, de aanmeldgegevens of streamonderhandeling onderzoeken."
-                    else if (openPorts.isNotEmpty())
-                    "De camera reageert op andere poorten, maar niet op RTSP-poort 554. Een open poort bewijst nog niet dat daar RTSP op draait."
+                append("Geteste TCP-poorten: ${ports.joinToString(", ")}\\n")
+                append("Reagerende TCP-poorten: ")
+                append(if (openPorts.isEmpty()) "geen" else openPorts.joinToString(", "))
+                append("\\n\\nRTSP OPTIONS-test op reagerende poorten:\\n")
+                if (rtspChecks.isEmpty()) append("Niet mogelijk: geen open TCP-poorten gevonden.\\n")
+                else rtspChecks.forEach { (port, response) ->
+                    append("Poort $port: $response\\n")
+                }
+                append("\\n")
+                append(if (rtspPorts.isNotEmpty())
+                    "Er is een RTSP-serverantwoord gevonden op poort(en) ${rtspPorts.joinToString(", ") { it.first.toString() }}. Dit is een sterke aanwijzing; daarna kunnen we de juiste stream testen."
+                    else if (openPorts.contains(34567))
+                    "Poort 34567 is bereikbaar, maar gaf geen herkenbaar RTSP-antwoord op OPTIONS. Dit kan een eigen cameradienst zijn in plaats van RTSP."
                     else
-                    "Geen van deze TCP-poorten reageert op dit IP-adres. Mogelijk gebruikt de originele 360Eyes-app cloud/P2P, of is lokale toegang/firewall/netwerksegmentatie de oorzaak. Camera-instellingen zijn niet gewijzigd.")
+                    "Geen herkenbaar RTSP-antwoord gevonden. Een open TCP-poort alleen bewijst niet dat daar RTSP draait. Camera-instellingen zijn niet gewijzigd.")
             }
             runOnUiThread {
                 if (camera == 1) diagnostic1 = report else diagnostic2 = report
@@ -321,6 +328,24 @@ class MainActivity : ComponentActivity() {
                 statusView.text = "● POORTSCAN KLAAR • tik voor details"
                 statusView.setTextColor(Color.RED)
             }
+        }
+    }
+
+    private fun probeRtsp(ip: String, port: Int): String {
+        return try {
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ip, port), 1200)
+                socket.soTimeout = 1500
+                val path = "/cam/realmonitor?channel=0&subtype=1"
+                val request = "OPTIONS rtsp://$ip:$port$path RTSP/1.0\\r\\nCSeq: 1\\r\\nUser-Agent: 360Eyes-Duo\\r\\n\\r\\n"
+                socket.getOutputStream().write(request.toByteArray(Charsets.US_ASCII))
+                socket.getOutputStream().flush()
+                val reader = socket.getInputStream().bufferedReader(Charsets.US_ASCII)
+                val firstLine = reader.readLine()?.take(160) ?: "(geen antwoord)"
+                if (firstLine.startsWith("RTSP/")) firstLine else "geen RTSP: $firstLine"
+            }
+        } catch (e: Exception) {
+            "geen RTSP-antwoord (${e.javaClass.simpleName})"
         }
     }
 
