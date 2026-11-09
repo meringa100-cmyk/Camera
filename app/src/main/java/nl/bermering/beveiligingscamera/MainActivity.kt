@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
                             } else if (body.contains("Envelope") || body.contains("Fault") || body.contains("www.onvif.org")) {
                                 found = true
                                 report.append("ONVIF-endpoint antwoordt op poort " + port + " (HTTP " + code + ").\n")
-                                val fault = Regex("<[^>]*Fault[^>]*>(.*?)</[^>]*Fault>", RegexOption.IGNORE_CASE or RegexOption.DOT_MATCHES_ALL).find(body)?.groupValues?.get(1)
+                                val fault = Regex("<[^>]*Fault[^>]*>(.*?)</[^>]*Fault>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).find(body)?.groupValues?.get(1)
                                 if (fault != null) report.append("SOAP-fout: " + fault.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(500) + "\n")
                                 report.append("Recording-service: " + body.contains("recording", true) + "\n")
                                 report.append("Replay-service: " + body.contains("replay", true) + "\n")
