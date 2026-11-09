@@ -127,32 +127,54 @@ class MainActivity : ComponentActivity() {
                 for (port in listOf(8080, 80, 8899, 8000, 5000)) {
                     for (path in listOf("/onvif/device_service", "/onvif/device_service/")) {
                         try {
+                            val nonce = ByteArray(20)
+                            java.security.SecureRandom().nextBytes(nonce)
+                            val created = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+                                timeZone = java.util.TimeZone.getTimeZone("UTC")
+                            }.format(java.util.Date())
+                            val password = "123456"
+                            val digestInput = nonce + created.toByteArray(Charsets.UTF_8) + password.toByteArray(Charsets.UTF_8)
+                            val digest = java.security.MessageDigest.getInstance("SHA-1").digest(digestInput)
+                            val nonce64 = android.util.Base64.encodeToString(nonce, android.util.Base64.NO_WRAP)
+                            val digest64 = android.util.Base64.encodeToString(digest, android.util.Base64.NO_WRAP)
+                            val soap = """<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope"
+ xmlns:tds="http://www.onvif.org/ver10/device/wsdl"
+ xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+ xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd">
+<s:Header><wsse:Security s:mustUnderstand="1"><wsse:UsernameToken>
+<wsse:Username>admin</wsse:Username>
+<wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest">$digest64</wsse:Password>
+<wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">$nonce64</wsse:Nonce>
+<wsu:Created>$created</wsu:Created>
+</wsse:UsernameToken></wsse:Security></s:Header>
+<s:Body><tds:GetServices><tds:IncludeCapability>false</tds:IncludeCapability></tds:GetServices></s:Body></s:Envelope>"""
                             val conn = java.net.URL("http://" + ip + ":" + port + path).openConnection() as java.net.HttpURLConnection
-                            conn.connectTimeout = 1800
-                            conn.readTimeout = 3000
+                            conn.connectTimeout = 2200
+                            conn.readTimeout = 3500
                             conn.requestMethod = "POST"
                             conn.doOutput = true
                             conn.setRequestProperty("Content-Type", "application/soap+xml; charset=utf-8; action=\"http://www.onvif.org/ver10/device/wsdl/GetServices\"")
                             conn.setRequestProperty("Accept", "application/soap+xml, text/xml")
-                            val soap = """<?xml version="1.0" encoding="UTF-8"?><s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl"><s:Body><tds:GetServices><tds:IncludeCapability>false</tds:IncludeCapability></tds:GetServices></s:Body></s:Envelope>"""
                             conn.outputStream.use { it.write(soap.toByteArray(Charsets.UTF_8)) }
                             val code = conn.responseCode
                             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                             val body = try { stream?.bufferedReader()?.use { it.readText() } ?: "" } catch (_: Exception) { "" }
                             if (code == 401) {
-                                report.append("ONVIF-pad op poort " + port + ", maar authenticatie geweigerd (HTTP 401).\n")
+                                report.append("ONVIF gevonden op poort " + port + ", HTTP 401: HTTP-authenticatie geweigerd.\n")
                                 found = true
                             } else if (body.contains("Envelope") || body.contains("Fault") || body.contains("www.onvif.org")) {
                                 found = true
-                                report.append("ONVIF-endpoint antwoordt op poort " + port + " (HTTP " + code + ").\n")
+                                report.append("ONVIF-antwoord op poort " + port + " (HTTP " + code + ").\n")
                                 val fault = Regex("<[^>]*Fault[^>]*>(.*?)</[^>]*Fault>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).find(body)?.groupValues?.get(1)
-                                if (fault != null) report.append("SOAP-fout: " + fault.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(500) + "\n")
-                                report.append("Recording-service: " + body.contains("recording", true) + "\n")
-                                report.append("Replay-service: " + body.contains("replay", true) + "\n")
-                                report.append("Search-service: " + body.contains("search", true) + "\n")
+                                if (fault != null) report.append("SOAP-fout: " + fault.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(450) + "\n")
+                                val services = Regex("<[^>]*Namespace[^>]*>(.*?)</[^>]*Namespace>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).findAll(body).map { it.groupValues[1].trim() }.toList()
+                                report.append("Recording-service: " + services.any { it.contains("recording", true) } + "\n")
+                                report.append("Replay-service: " + services.any { it.contains("replay", true) } + "\n")
+                                report.append("Search-service: " + services.any { it.contains("search", true) } + "\n")
                                 val xaddrs = Regex("<[^>]*XAddr[^>]*>(.*?)</[^>]*XAddr>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)).findAll(body).map { it.groupValues[1].trim() }.distinct().toList()
                                 if (xaddrs.isNotEmpty()) report.append("Service-adressen:\n" + xaddrs.take(10).joinToString("\n") + "\n")
-                                if (fault == null && xaddrs.isEmpty()) report.append("Antwoordfragment: " + body.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(650) + "\n")
+                                if (fault == null && services.isEmpty()) report.append("Antwoord: " + body.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(400) + "\n")
                             }
                             conn.disconnect()
                             if (found) break
