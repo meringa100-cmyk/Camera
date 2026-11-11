@@ -164,6 +164,7 @@
     <!-- Read-only ONVIF SD-card recording diagnostic -->
     <Button
         android:id="@+id/testRecordings"
+        android:visibility="gone"
         android:text="SD-OPNAMEN / ONVIF TESTEN"
         android:textSize="12sp"
         android:minHeight="40dp"
@@ -172,6 +173,7 @@
 
     <Button
         android:id="@+id/togglePtz"
+        android:visibility="gone"
         android:text="⚙  CAMERA BEDIENEN  ▾"
         android:textSize="12sp"
         android:minHeight="40dp"
